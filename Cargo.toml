@@ -1,0 +1,9 @@
+[package]
+name = "bible-bot-rust"
+version = "0.1.0"
+authors = ["Joel Clarke <joel.clarke273@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+http = "0.1.18"
+orca = "0.7.0"
