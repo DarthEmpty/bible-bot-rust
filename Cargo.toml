@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 http = "0.1.18"
 orca = "0.7.0"
+regex = "1.2.1"
