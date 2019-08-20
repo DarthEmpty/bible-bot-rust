@@ -31,16 +31,21 @@ fn extract_refs(text: &str) -> Vec<String> {
         .collect()
 }
 
-fn lookup_ref(reference: &str) -> Option<Passage> {
+fn lookup_ref(reference: &str) -> Result<String, reqwest::Error> {
     let url = format!("https://getbible.net/json?text={}", reference);
-    let text: String = reqwest::get(&url).unwrap()
-        .text().unwrap()
+    let text: String = reqwest
+        ::get(&url)?
+        .text()?
         .replace("(", "")
         .replace(");", "");
 
+    Ok(text)
+}
+
+fn to_passage(text: &str) -> Option<Passage> {
     let mut json: Value = serde_json::from_str(&text).unwrap_or_default();
 
-    match json["type"].as_str().unwrap() {
+    match json["type"].as_str().unwrap_or_default() {
         "chapter" => Some(Passage::from(
             json["chapter"].take()
         )),
@@ -50,6 +55,15 @@ fn lookup_ref(reference: &str) -> Option<Passage> {
         _ => None
     }
 }
+
+// fn lookup_refs(refs: Vec<String>) -> Vec<Passage> {
+//     refs
+//         .into_iter()
+//         .map(|reference| {
+//             lookup_ref(&reference).unwrap()
+//         })
+//         .collect()
+// }
 
 #[cfg(test)]
 mod tests {
@@ -70,8 +84,14 @@ mod tests {
 
     #[test]
     fn test_lookup_ref() {
-        let passage = lookup_ref("John3:16-17");
-        assert!(passage.is_some());
-        println!("{:?}", passage.unwrap());
+        let text = lookup_ref("John3:16-17");
+        assert!(text.is_ok());
+    }
+
+    #[test]
+    fn test_to_passage() {
+        let text = lookup_ref("John3:16-17");
+        let passage = to_passage(&text.unwrap());
+        assert!(passage.is_some())
     }
 }
