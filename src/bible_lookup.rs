@@ -4,7 +4,7 @@ use regex::Regex;
 use serde::Deserialize;
 use serde_json::{self, Value};
 
-#[derive(Deserialize, Debug)]
+#[derive(Default, Deserialize, Debug)]
 struct Passage(HashMap<String, HashMap<String, Value>>);
 
 impl From<Value> for Passage {
@@ -31,7 +31,7 @@ fn extract_refs(text: &str) -> Vec<String> {
         .collect()
 }
 
-fn lookup_ref(reference: &str) -> Result<String, reqwest::Error> {
+fn get_ref(reference: &str) -> Result<String, reqwest::Error> {
     let url = format!("https://getbible.net/json?text={}", reference);
     let text: String = reqwest
         ::get(&url)?
@@ -56,14 +56,16 @@ fn to_passage(text: &str) -> Option<Passage> {
     }
 }
 
-// fn lookup_refs(refs: Vec<String>) -> Vec<Passage> {
-//     refs
-//         .into_iter()
-//         .map(|reference| {
-//             lookup_ref(&reference).unwrap()
-//         })
-//         .collect()
-// }
+fn refs_to_passages(refs: Vec<String>) -> Vec<Option<Passage>> {
+    refs
+        .into_iter()
+        .map(|reference| {
+            let text = get_ref(&reference).unwrap_or_default();
+            
+            to_passage(&text)
+        })
+        .collect()
+}
 
 #[cfg(test)]
 mod tests {
@@ -84,14 +86,21 @@ mod tests {
 
     #[test]
     fn test_lookup_ref() {
-        let text = lookup_ref("John3:16-17");
+        let text = get_ref("John3:16-17");
         assert!(text.is_ok());
     }
 
     #[test]
     fn test_to_passage() {
-        let text = lookup_ref("John3:16-17");
+        let text = get_ref("John3:16-17");
         let passage = to_passage(&text.unwrap());
         assert!(passage.is_some())
+    }
+
+    #[test]
+    fn test_lookup_refs() {
+        let passages = refs_to_passages(vec![String::from("John3:16-17"), String::from("1Corinthians13")]);
+        let res: Vec<Option<Passage>> = passages.into_iter().filter(|passage| passage.is_none()).collect();
+        assert!(res.is_empty())
     }
 }
