@@ -9,13 +9,12 @@ pub fn extract_refs(text: &str) -> Vec<String> {
     
     let pattern = Regex::new(PATTERN_STRING).unwrap();
     let string = text.replace(" ", "").replace("\\", "");
-    let mut refs = Vec::new();
 
-    for cap in pattern.captures_iter(&string) {
-        refs.push(String::from(cap.get(1).unwrap().as_str()));
-    }
-
-    refs
+    pattern
+        .captures_iter(&string)
+        .map(|cap|
+            String::from(cap.get(1).unwrap().as_str()))
+        .collect()
 }
 
 #[cfg(test)]
