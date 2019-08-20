@@ -5,6 +5,7 @@ authors = ["Joel Clarke <joel.clarke273@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-http = "0.1.18"
 orca = "0.7.0"
 regex = "1.2.1"
+reqwest = "0.9.19"
+serde_json = "1.0.40"

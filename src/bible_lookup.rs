@@ -1,6 +1,12 @@
+use reqwest::{self};
 use regex::Regex;
+use serde_json::{self, Result, Value};
 
-pub fn extract_refs(text: &str) -> Vec<String> {
+struct Chapter;
+
+struct Verse;
+
+fn extract_refs(text: &str) -> Vec<String> {
     // Matches with:
     // <book><chapter> (book may have digit as prefix)
     // <book><chapter>:<verse>
@@ -12,14 +18,32 @@ pub fn extract_refs(text: &str) -> Vec<String> {
 
     pattern
         .captures_iter(&string)
-        .map(|cap|
-            String::from(cap.get(1).unwrap().as_str()))
+        .map(|cap| {
+            String::from(cap.get(1).unwrap().as_str())
+        })
         .collect()
+}
+
+fn lookup_ref(reference: &str) -> Option<Value> {
+    let url = format!("https://getbible.net/json?text={}", reference);
+    let text: String = reqwest::get(&url).unwrap()
+        .text().unwrap()
+        .replace("(", "")
+        .replace(");", "");
+
+    let json: Value = serde_json::from_str(&text).unwrap_or_default();
+
+    if (json["type"] == "verse") | (json["type"] == "chapter") {
+        return Some(json);
+    }
+    
+    None
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn test_extract_refs() {
         let refs = extract_refs(
@@ -31,5 +55,11 @@ mod tests {
             refs,
             vec!["John3:16-17", "1Corinthians13"]
         );
+    }
+
+    #[test]
+    fn test_lookup_ref() {
+        let passage = lookup_ref("John3:16-17");
+        assert_ne!(passage, None);
     }
 }
