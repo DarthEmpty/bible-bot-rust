@@ -1,10 +1,17 @@
+use std::collections::HashMap;
 use reqwest;
 use regex::Regex;
+use serde::Deserialize;
 use serde_json::{self, Value};
 
-struct Chapter;
+#[derive(Deserialize, Debug)]
+struct Passage(HashMap<String, HashMap<String, Value>>);
 
-struct Verse;
+impl From<Value> for Passage {
+    fn from(v: Value) -> Passage {
+        serde_json::from_value(v).unwrap()
+    }
+}
 
 fn extract_refs(text: &str) -> Vec<String> {
     // Matches with:
@@ -24,17 +31,22 @@ fn extract_refs(text: &str) -> Vec<String> {
         .collect()
 }
 
-fn lookup_ref(reference: &str) -> Option<Value> {
+fn lookup_ref(reference: &str) -> Option<Passage> {
     let url = format!("https://getbible.net/json?text={}", reference);
     let text: String = reqwest::get(&url).unwrap()
         .text().unwrap()
         .replace("(", "")
         .replace(");", "");
 
-    let json: Value = serde_json::from_str(&text).unwrap_or_default();
+    let mut json: Value = serde_json::from_str(&text).unwrap_or_default();
 
     match json["type"].as_str().unwrap() {
-        "verse" | "chapter" => Some(json),
+        "chapter" => Some(Passage::from(
+            json["chapter"].take()
+        )),
+        "verse" => Some(Passage::from(
+            json["book"][0]["chapter"].take()
+        )),
         _ => None
     }
 }
@@ -59,6 +71,7 @@ mod tests {
     #[test]
     fn test_lookup_ref() {
         let passage = lookup_ref("John3:16-17");
-        assert_ne!(passage, None);
+        assert!(passage.is_some());
+        println!("{:?}", passage.unwrap());
     }
 }
