@@ -1,6 +1,6 @@
-use reqwest::{self};
+use reqwest;
 use regex::Regex;
-use serde_json::{self, Result, Value};
+use serde_json::{self, Value};
 
 struct Chapter;
 
@@ -33,11 +33,10 @@ fn lookup_ref(reference: &str) -> Option<Value> {
 
     let json: Value = serde_json::from_str(&text).unwrap_or_default();
 
-    if (json["type"] == "verse") | (json["type"] == "chapter") {
-        return Some(json);
+    match json["type"].as_str().unwrap() {
+        "verse" | "chapter" => Some(json),
+        _ => None
     }
-    
-    None
 }
 
 #[cfg(test)]
