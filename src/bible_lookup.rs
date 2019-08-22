@@ -62,7 +62,7 @@ fn to_passage(text: &str) -> Option<Passage> {
     }
 }
 
-fn refs_to_passages(refs: Vec<String>) -> Vec<Option<Passage>> {
+fn refs_to_passages(refs: Vec<&str>) -> Vec<Option<Passage>> {
     refs
         .into_iter()
         .map(|reference| {
@@ -135,7 +135,7 @@ mod tests {
 
     #[test]
     fn test_lookup_refs() {
-        let passages = refs_to_passages(vec![String::from("John3:16-17"), String::from("1Corinthians13")]);
+        let passages = refs_to_passages(vec!["John3:16-17", "1Corinthians13"]);
         let res: Vec<Option<Passage>> = passages.into_iter().filter(|passage| passage.is_none()).collect();
         assert!(res.is_empty());
     }
