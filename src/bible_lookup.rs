@@ -4,6 +4,12 @@ use regex::Regex;
 use serde::Deserialize;
 use serde_json::{self, Value};
 
+// Hashmap structure:
+// Passage({
+//     <verse-no> : { 
+//         "verse_nr" : Number | String,
+//         "verse" : String
+// })
 #[derive(Default, Deserialize, Debug)]
 struct Passage(HashMap<String, HashMap<String, Value>>);
 
@@ -25,9 +31,9 @@ fn extract_refs(text: &str) -> Vec<String> {
 
     pattern
         .captures_iter(&string)
-        .map(|cap| {
+        .map(|cap| 
             String::from(cap.get(1).unwrap().as_str())
-        })
+        )
         .collect()
 }
 
@@ -67,8 +73,38 @@ fn refs_to_passages(refs: Vec<String>) -> Vec<Option<Passage>> {
         .collect()
 }
 
+fn build_reply(book: &str, chapter: &str, passage: Passage, version: &str) -> String {
+    let mut reply = format!("{} {} ({})\n\n", book, chapter, version);
+    let mut keys: Vec<u8> = passage.0
+        .keys()
+        .map(|k|
+            k.parse::<_>().unwrap_or_default()
+        )
+        .collect();
+
+    keys.sort();
+    
+    for key in keys {
+        let k = key.to_string();
+        let verse = passage.0
+            .get(&k)
+            .and_then(|v|
+                v.get("verse")
+            )
+            .and_then(|verse_value|
+                verse_value.as_str()
+            );
+
+        let formed_verse = format!("^({}) {}", k, verse.unwrap_or_default());
+        reply.push_str(&formed_verse);
+    }
+
+    reply
+}
+
 #[cfg(test)]
 mod tests {
+    // TODO: Improve these to be more thorough
     use super::*;
 
     #[test]
@@ -94,13 +130,22 @@ mod tests {
     fn test_to_passage() {
         let text = get_ref("John3:16-17");
         let passage = to_passage(&text.unwrap());
-        assert!(passage.is_some())
+        assert!(passage.is_some());
     }
 
     #[test]
     fn test_lookup_refs() {
         let passages = refs_to_passages(vec![String::from("John3:16-17"), String::from("1Corinthians13")]);
         let res: Vec<Option<Passage>> = passages.into_iter().filter(|passage| passage.is_none()).collect();
-        assert!(res.is_empty())
+        assert!(res.is_empty());
+    }
+
+    #[test]
+    fn test_build_reply() {
+        let text = get_ref("John3:16-17");
+        let passage = to_passage(&text.unwrap());
+        let reply = build_reply("John", "3", passage.unwrap(), "kjv");
+        assert!(!reply.is_empty());
+        println!("{}", reply);
     }
 }
