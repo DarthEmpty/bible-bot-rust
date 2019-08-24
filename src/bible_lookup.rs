@@ -90,7 +90,7 @@ fn extract_refs(text: &str) -> Vec<String> {
         .collect()
 }
 
-fn get_ref(reference: &str) -> Result<String, reqwest::Error> {
+fn fetch_ref(reference: &str) -> Result<String, reqwest::Error> {
     let url = format!("https://getbible.net/json?text={}", reference);
     let text: String = reqwest
         ::get(&url)?
@@ -101,9 +101,11 @@ fn get_ref(reference: &str) -> Result<String, reqwest::Error> {
     Ok(text)
 }
 
-fn to_passage(text: &str) -> Option<Passage> {
-    let mut json: Value = serde_json::from_str(&text).unwrap_or_default();
+fn to_json(text: &str) -> serde_json::Result<Value> {
+    serde_json::from_str(text)
+} 
 
+fn extract_passage(json: &mut Value) -> Option<Passage> {
     match json["type"].as_str().unwrap_or_default() {
         "chapter" => Some(Passage::from(
             json["chapter"].take()
@@ -115,13 +117,30 @@ fn to_passage(text: &str) -> Option<Passage> {
     }
 }
 
+fn extract_passage_info(json: &mut Value) -> Option<PassageInfo> {
+    match json["type"].as_str().unwrap_or_default() {
+        "chapter" => Some(PassageInfo::new(
+            json["book_name"].take(),
+            json["chapter_nr"].take(),
+            json["version"].take()
+        )),
+        "verse" => Some(PassageInfo::new(
+            json["book"][0]["book_name"].take(),
+            json["book"][0]["chapter_nr"].take(),
+            json["version"].take()
+        )),
+        _ => None
+    }
+}
+
 fn refs_to_passages(refs: Vec<&str>) -> Vec<Option<Passage>> {
     refs
         .into_iter()
         .map(|reference| {
-            let text = get_ref(&reference).unwrap_or_default();
-            
-            to_passage(&text)
+            let text = fetch_ref(&reference).unwrap_or_default();
+            let mut json = to_json(&text).unwrap_or_default();
+
+            extract_passage(&mut json)
         })
         .collect()
 }
@@ -149,31 +168,55 @@ mod tests {
     }
 
     #[test]
-    fn test_lookup_ref() {
-        let text = get_ref("John3:16-17");
-        assert!(text.is_ok());
+    fn test_fetch_ref() {
+        let text_res = fetch_ref("John3:16-17");
+        assert!(text_res.is_ok());
+    }
+
+    fn test_to_json() {
+        let text = fetch_ref("John3:16-17").unwrap();
+        let json_res = to_json(&text);
+        assert!(json_res.is_ok());
     }
 
     #[test]
-    fn test_to_passage() {
-        let text = get_ref("John3:16-17");
-        let passage = to_passage(&text.unwrap());
+    fn test_extract_passage() {
+        let text = fetch_ref("John3:16-17").unwrap();
+        let mut json = to_json(&text).unwrap();
+        let passage = extract_passage(&mut json);
         assert!(passage.is_some());
     }
 
     #[test]
-    fn test_lookup_refs() {
+    fn test_extract_passage_info() {
+        let text = fetch_ref("John3:16-17").unwrap();
+        let mut json = to_json(&text).unwrap();
+
+        println!("{:?}", json);
+
+        let passage_info = extract_passage_info(&mut json);
+        assert!(passage_info.is_some());
+    }
+
+    #[test]
+    fn test_refs_to_passages() {
         let passages = refs_to_passages(vec!["John3:16-17", "1Corinthians13"]);
-        let res: Vec<Option<Passage>> = passages.into_iter().filter(|passage| passage.is_none()).collect();
+        let res: Vec<Option<Passage>> = passages
+            .into_iter()
+            .filter(|passage|
+                passage.is_none()
+            )
+            .collect();
         assert!(res.is_empty());
     }
 
     #[test]
     fn test_build_reply() {
-        let text = get_ref("John3:16-17");
-        let passage = to_passage(&text.unwrap());
-        let reply = build_reply("John", "3", passage.unwrap(), "kjv");
+        let text = fetch_ref("John3:16-17").unwrap();
+        let mut json = to_json(&text).unwrap();
+        let passage = extract_passage(&mut json).unwrap();
+        let passage_info = extract_passage_info(&mut json).unwrap();
+        let reply = build_reply(passage_info, passage);
         assert!(!reply.is_empty());
-        println!("{}", reply);
     }
 }
