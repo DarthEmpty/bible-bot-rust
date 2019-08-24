@@ -9,10 +9,7 @@ fn test_extract_refs() {
         and I wanna look at [[1Corinthians13]]",
     );
 
-    assert_eq!(
-        refs,
-        vec!["John3:16-17", "1Corinthians13"]
-    );
+    assert_eq!(refs, vec!["John3:16-17", "1Corinthians13"]);
 }
 
 #[test]
@@ -52,9 +49,7 @@ fn test_refs_to_passages() {
     let passages = refs_to_passages(vec!["John3:16-17", "1Corinthians13"]);
     let res: Vec<Option<Passage>> = passages
         .into_iter()
-        .filter(|passage|
-            passage.is_none()
-        )
+        .filter(|passage| passage.is_none())
         .collect();
     assert!(res.is_empty());
 }
