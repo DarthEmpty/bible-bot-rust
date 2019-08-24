@@ -19,6 +19,59 @@ impl From<Value> for Passage {
     }
 }
 
+impl ToString for Passage {
+    fn to_string(&self) -> String {
+        let mut string = String::new();
+        let mut keys: Vec<u8> = self.0
+            .keys()
+            .map(|k|
+                k.parse::<_>().unwrap_or_default()
+            )
+            .collect();
+
+        keys.sort();
+
+        for key in keys {
+            let k = key.to_string();
+            let verse = self.0
+                .get(&k)
+                .and_then(|v|
+                    v.get("verse")
+                )
+                .and_then(|verse_value|
+                    verse_value.as_str()
+                );
+
+            let formed_verse = format!("^({}) {}", k, verse.unwrap_or_default());
+            string.push_str(&formed_verse);
+        }
+
+        string
+    }
+}
+
+struct PassageInfo {
+    book: String,
+    chapter: String,
+    version: String
+}
+
+impl PassageInfo {
+    fn new(book: Value, chapter: Value, version: Value) -> PassageInfo {
+        PassageInfo {
+            book: String::from(book.as_str().unwrap()),
+            chapter: String::from(chapter.as_str().unwrap()),
+            version: String::from(version.as_str().unwrap())
+        }
+    }
+}
+
+impl ToString for PassageInfo {
+    fn to_string(&self) -> String {
+        format!("{} {} ({})", self.book, self.chapter, self.version)
+    }
+}
+
 fn extract_refs(text: &str) -> Vec<String> {
     // Matches with:
     // <book><chapter> (book may have digit as prefix)
@@ -73,33 +126,8 @@ fn refs_to_passages(refs: Vec<&str>) -> Vec<Option<Passage>> {
         .collect()
 }
 
-fn build_reply(book: &str, chapter: &str, passage: Passage, version: &str) -> String {
-    let mut reply = format!("{} {} ({})\n\n", book, chapter, version);
-    let mut keys: Vec<u8> = passage.0
-        .keys()
-        .map(|k|
-            k.parse::<_>().unwrap_or_default()
-        )
-        .collect();
-
-    keys.sort();
-    
-    for key in keys {
-        let k = key.to_string();
-        let verse = passage.0
-            .get(&k)
-            .and_then(|v|
-                v.get("verse")
-            )
-            .and_then(|verse_value|
-                verse_value.as_str()
-            );
-
-        let formed_verse = format!("^({}) {}", k, verse.unwrap_or_default());
-        reply.push_str(&formed_verse);
-    }
-
-    reply
+fn build_reply(info: PassageInfo, passage: Passage) -> String {
+    format!("{}\n\n{}", info.to_string(), passage.to_string())
 }
 
 #[cfg(test)]
