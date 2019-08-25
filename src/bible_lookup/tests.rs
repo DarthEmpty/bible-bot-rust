@@ -70,6 +70,4 @@ fn test_build_replies() {
     let pairs = refs_to_passage_pairs(refs);
     let replies = build_replies(pairs);
     assert!(!replies.contains("Could not find requested passage"));
-
-    println!("{}", replies);
 }

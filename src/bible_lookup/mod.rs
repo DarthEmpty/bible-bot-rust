@@ -71,7 +71,6 @@ pub fn refs_to_passage_pairs(refs: Vec<&str>) -> Vec<Option<(PassageInfo, Passag
             if (passage_info.is_none()) || (passage.is_none()) {
                 return None;
             }
-            
             Some((passage_info.unwrap(), passage.unwrap()))
         })
         .collect()
@@ -94,5 +93,4 @@ pub fn build_replies(passage_pairs: Vec<Option<(PassageInfo, Passage)>>) -> Stri
         })
         .collect::<Vec<String>>()
         .join("\n---\n")
-        
 }
