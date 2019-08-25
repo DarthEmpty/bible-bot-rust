@@ -81,4 +81,18 @@ fn build_reply(info: PassageInfo, passage: Passage) -> String {
     format!("{}\n\n{}", info.to_string(), passage.to_string())
 }
 
-pub fn build_replies() {}
+pub fn build_replies(passage_pairs: Vec<Option<(PassageInfo, Passage)>>) -> String {
+    passage_pairs
+        .into_iter()
+        .map(|pair| {
+            if pair.is_some() {
+                let unwrapped = pair.unwrap();
+                return build_reply(unwrapped.0, unwrapped.1);
+            }
+
+            String::from("Could not find requested passage\n\n")
+        })
+        .collect::<Vec<String>>()
+        .join("\n---\n")
+        
+}

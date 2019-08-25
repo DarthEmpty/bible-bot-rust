@@ -13,7 +13,7 @@ pub struct Passage(HashMap<String, HashMap<String, Value>>);
 
 impl From<Value> for Passage {
     fn from(v: Value) -> Passage {
-        serde_json::from_value(v).unwrap()
+        serde_json::from_value(v).unwrap_or_default()
     }
 }
 
@@ -53,9 +53,9 @@ pub struct PassageInfo {
 impl PassageInfo {
     pub fn new(book: Value, chapter: Value, version: Value) -> PassageInfo {
         PassageInfo {
-            book: String::from(book.as_str().unwrap()),
-            chapter: String::from(chapter.as_str().unwrap()),
-            version: String::from(version.as_str().unwrap()),
+            book: String::from(book.as_str().unwrap_or_default()),
+            chapter: String::from(chapter.as_str().unwrap_or_default()),
+            version: String::from(version.as_str().unwrap_or_default()),
         }
     }
 }

@@ -56,10 +56,20 @@ fn test_refs_to_passages() {
 
 #[test]
 fn test_build_reply() {
-    let text = fetch_ref("John3:16-17").unwrap();
+    let text = fetch_ref("John3:16-18").unwrap();
     let mut json = to_json(&text).unwrap();
     let passage = extract_passage(&mut json).unwrap();
     let passage_info = extract_passage_info(&mut json).unwrap();
     let reply = build_reply(passage_info, passage);
     assert!(!reply.is_empty());
+}
+
+#[test]
+fn test_build_replies() {
+    let refs = vec!["John3:16-17", "1Corinthians13"];
+    let pairs = refs_to_passage_pairs(refs);
+    let replies = build_replies(pairs);
+    assert!(!replies.contains("Could not find requested passage"));
+
+    println!("{}", replies);
 }
