@@ -6,7 +6,7 @@ use regex::Regex;
 use reqwest;
 use serde_json::{self, Value};
 
-fn extract_refs(text: &str) -> Vec<String> {
+pub fn extract_refs(text: &str) -> Vec<String> {
     // Matches with:
     // <book><chapter> (book may have digit as prefix)
     // <book><chapter>:<verse>
@@ -59,13 +59,20 @@ fn extract_passage_info(json: &mut Value) -> Option<PassageInfo> {
     }
 }
 
-fn refs_to_passages(refs: Vec<&str>) -> Vec<Option<Passage>> {
+pub fn refs_to_passage_pairs(refs: Vec<&str>) -> Vec<Option<(PassageInfo, Passage)>> {
     refs.into_iter()
         .map(|reference| {
             let text = fetch_ref(&reference).unwrap_or_default();
             let mut json = to_json(&text).unwrap_or_default();
 
-            extract_passage(&mut json)
+            let passage_info = extract_passage_info(&mut json);
+            let passage = extract_passage(&mut json);
+
+            if (passage_info.is_none()) || (passage.is_none()) {
+                return None;
+            }
+            
+            Some((passage_info.unwrap(), passage.unwrap()))
         })
         .collect()
 }
@@ -73,3 +80,5 @@ fn refs_to_passages(refs: Vec<&str>) -> Vec<Option<Passage>> {
 fn build_reply(info: PassageInfo, passage: Passage) -> String {
     format!("{}\n\n{}", info.to_string(), passage.to_string())
 }
+
+pub fn build_replies() {}

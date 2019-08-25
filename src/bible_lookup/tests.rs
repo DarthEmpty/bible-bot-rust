@@ -46,10 +46,10 @@ fn test_extract_passage_info() {
 
 #[test]
 fn test_refs_to_passages() {
-    let passages = refs_to_passages(vec!["John3:16-17", "1Corinthians13"]);
-    let res: Vec<Option<Passage>> = passages
+    let passage_pairs = refs_to_passage_pairs(vec!["John3:16-17", "1Corinthians13"]);
+    let res: Vec<Option<(PassageInfo, Passage)>> = passage_pairs
         .into_iter()
-        .filter(|passage| passage.is_none())
+        .filter(|pair| pair.is_none())
         .collect();
     assert!(res.is_empty());
 }
