@@ -19,7 +19,6 @@ impl From<Value> for Passage {
 
 impl ToString for Passage {
     fn to_string(&self) -> String {
-        let mut string = String::new();
         let mut keys: Vec<u8> = self
             .0
             .keys()
@@ -28,19 +27,17 @@ impl ToString for Passage {
 
         keys.sort();
 
-        for key in keys {
-            let k = key.to_string();
-            let verse = self
-                .0
-                .get(&k)
-                .and_then(|v| v.get("verse"))
-                .and_then(|verse_value| verse_value.as_str());
-
-            let formed_verse = format!("^({}) {}", k, verse.unwrap_or_default());
-            string.push_str(&formed_verse);
-        }
-
-        string
+        keys.into_iter()
+            .map(|key| {
+                let k = key.to_string();
+                let verse = self
+                    .0
+                    .get(&k)
+                    .and_then(|v| v.get("verse"))
+                    .and_then(|verse_value| verse_value.as_str());
+                format!("^({}) {}", k, verse.unwrap_or_default())
+            })
+            .collect::<String>()
     }
 }
 
