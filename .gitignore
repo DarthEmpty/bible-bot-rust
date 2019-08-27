@@ -2,3 +2,4 @@
 /target
 **/*.rs.bk
 config.toml
+read_comments.json

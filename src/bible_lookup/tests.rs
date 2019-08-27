@@ -39,7 +39,7 @@ fn test_extract_passage_info() {
 
 #[test]
 fn test_refs_to_passages() {
-    let passage_pairs = refs_to_passage_pairs(vec!["John3:16-17", "1Corinthians13"]);
+    let passage_pairs = refs_to_passage_pairs(vec![String::from("John3:16-17"), String::from("1Corinthians13")]);
     let res: Vec<Option<(PassageInfo, Passage)>> = passage_pairs
         .into_iter()
         .filter(|pair| pair.is_none())
@@ -59,7 +59,7 @@ fn test_build_reply() {
 
 #[test]
 fn test_build_replies() {
-    let refs = vec!["John3:16-17", "1Corinthians13"];
+    let refs = vec![String::from("John3:16-17"), String::from("1Corinthians13")];
     let pairs = refs_to_passage_pairs(refs);
     let replies = build_replies(pairs);
     assert!(!replies.contains("Could not find requested passage"));

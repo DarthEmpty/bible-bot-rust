@@ -55,7 +55,7 @@ fn extract_passage_info(json: &mut Value) -> Option<PassageInfo> {
     }
 }
 
-pub fn refs_to_passage_pairs(refs: Vec<&str>) -> Vec<Option<(PassageInfo, Passage)>> {
+pub fn refs_to_passage_pairs(refs: Vec<String>) -> Vec<Option<(PassageInfo, Passage)>> {
     refs.into_iter()
         .map(|reference| {
             let text = fetch_ref(&reference).unwrap_or_default();
