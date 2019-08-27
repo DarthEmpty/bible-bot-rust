@@ -19,16 +19,9 @@ fn test_fetch_ref() {
 }
 
 #[test]
-fn test_to_json() {
-    let text = fetch_ref("John3:16-17").unwrap();
-    let json_res = to_json(&text);
-    assert!(json_res.is_ok());
-}
-
-#[test]
 fn test_extract_passage() {
     let text = fetch_ref("John3:16-17").unwrap();
-    let mut json = to_json(&text).unwrap();
+    let mut json = serde_json::from_str(&text).unwrap();
     let passage = extract_passage(&mut json);
     assert!(passage.is_some());
 }
@@ -36,7 +29,7 @@ fn test_extract_passage() {
 #[test]
 fn test_extract_passage_info() {
     let text = fetch_ref("John3:16-17").unwrap();
-    let mut json = to_json(&text).unwrap();
+    let mut json = serde_json::from_str(&text).unwrap();
 
     println!("{:?}", json);
 
@@ -57,7 +50,7 @@ fn test_refs_to_passages() {
 #[test]
 fn test_build_reply() {
     let text = fetch_ref("John3:16-18").unwrap();
-    let mut json = to_json(&text).unwrap();
+    let mut json = serde_json::from_str(&text).unwrap();
     let passage = extract_passage(&mut json).unwrap();
     let passage_info = extract_passage_info(&mut json).unwrap();
     let reply = build_reply(passage_info, passage);

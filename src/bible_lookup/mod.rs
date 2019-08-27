@@ -31,10 +31,6 @@ fn fetch_ref(reference: &str) -> Result<String, reqwest::Error> {
     Ok(text)
 }
 
-fn to_json(text: &str) -> serde_json::Result<Value> {
-    serde_json::from_str(text)
-}
-
 fn extract_passage(json: &mut Value) -> Option<Passage> {
     match json["type"].as_str().unwrap_or_default() {
         "chapter" => Some(Passage::from(json["chapter"].take())),
@@ -63,7 +59,7 @@ pub fn refs_to_passage_pairs(refs: Vec<&str>) -> Vec<Option<(PassageInfo, Passag
     refs.into_iter()
         .map(|reference| {
             let text = fetch_ref(&reference).unwrap_or_default();
-            let mut json = to_json(&text).unwrap_or_default();
+            let mut json = serde_json::from_str(&text).unwrap_or_default();
 
             let passage_info = extract_passage_info(&mut json);
             let passage = extract_passage(&mut json);
