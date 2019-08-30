@@ -1,7 +1,14 @@
-use s3::{self, bucket::Bucket};
+use s3::{self, bucket::Bucket, credentials::Credentials, error::S3Result, region::Region};
 use serde_json;
 use std::collections::HashMap;
 use toml;
+
+pub fn create_bucket() -> S3Result<Bucket> {
+    const NAME: &str = "bible-bot";
+    const REGION: Region = Region::EuWest2;
+
+    Bucket::new(NAME, REGION, Credentials::default())
+}
 
 fn get_from_bucket(filename: &str, bucket: &Bucket) -> Option<String> {
   let (data, code) = bucket.get_object(filename).unwrap_or_default();
