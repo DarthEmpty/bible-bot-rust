@@ -23,7 +23,7 @@ pub fn load_config(bucket: &Bucket) -> Option<HashMap<String, String>> {
   get_from_bucket(CONFIG_FILE, bucket).and_then(|s| toml::from_str(&s).ok())
 }
 
-pub fn load_read_comments(bucket: &Bucket) -> Option<Vec<String>> {
-  const READ_COMMENTS_FILE: &str = "read_comments.json";
-  get_from_bucket(READ_COMMENTS_FILE, bucket).and_then(|s| serde_json::from_str(&s).ok())
+pub fn load_past_comments(bucket: &Bucket) -> Option<Vec<String>> {
+  const FILE: &str = "past_comments.json";
+  get_from_bucket(FILE, bucket).and_then(|s| serde_json::from_str(&s).ok())
 }
