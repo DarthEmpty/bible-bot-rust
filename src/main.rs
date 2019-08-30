@@ -3,15 +3,7 @@ mod s3_access;
 
 use bounded_vec_deque::BoundedVecDeque;
 use orca::{data::Comment, data::Listing, App};
-use serde_json;
 use std::collections::HashMap;
-use std::fs::write;
-
-fn save_read_comments(comments: Vec<String>) {
-    const READ_COMMENTS_FILE: &str = "src/read_comments.json";
-    let json = serde_json::to_string(&comments).expect("Could not serialize comments");
-    write(READ_COMMENTS_FILE, json).expect("Could not save comments");
-}
 
 fn create_app(config: HashMap<String, String>) -> App {
     let mut app = App::new(&config["app_name"], &config["version"], &config["author"])
@@ -55,5 +47,5 @@ fn main() {
         reddit.comment(&reply_body, &comment.id).ok().map(|_| String::from(comment.id))
     }));
     
-    save_read_comments(Vec::from(past_comments.into_unbounded()));    
+    s3_access::save_past_comments(Vec::from(past_comments.into_unbounded()), &bucket);    
 }
