@@ -1,27 +1,23 @@
 mod bible_lookup;
+mod s3_access;
 
 use orca::{data::Comment, data::Listing, App};
+use s3::{self, bucket::Bucket, credentials::Credentials, error::S3Result, region::Region};
 use serde_json;
 use std::collections::HashMap;
-use std::fs::{read_to_string, write};
-use toml;
-
-fn load_config() -> HashMap<String, String> {
-    const CONFIG_FILE: &str = "src/config.toml";
-    let toml = read_to_string(CONFIG_FILE).expect("No file found");
-    toml::from_str(&toml).expect("Could not deserialize file")
-}
-
-fn load_read_comments() -> Vec<String> {
-    const READ_COMMENTS_FILE: &str = "src/read_comments.json";
-    let json = read_to_string(READ_COMMENTS_FILE).expect("No file found");
-    serde_json::from_str(&json).expect("Could not deserialize file")
-}
+use std::fs::write;
 
 fn save_read_comments(comments: Vec<String>) {
     const READ_COMMENTS_FILE: &str = "src/read_comments.json";
-    let json = serde_json::to_string(&comments).expect("Could not serealize comments");
+    let json = serde_json::to_string(&comments).expect("Could not serialize comments");
     write(READ_COMMENTS_FILE, json).expect("Could not save comments");
+}
+
+fn create_bucket() -> S3Result<Bucket> {
+    const NAME: &str = "bible-bot";
+    const REGION: Region = Region::EuWest2;
+
+    Bucket::new(NAME, REGION, Credentials::default())
 }
 
 fn create_app(config: HashMap<String, String>) -> App {
@@ -45,7 +41,9 @@ fn get_comments(reddit: &App) -> Listing<Comment> {
 }
 
 fn main() {
-    let config = load_config();
+    let bucket = create_bucket().expect("Could not create bucket");
+
+    let config = s3_access::load_config(bucket);
     let reddit = create_app(config);
 
     let comments = get_comments(&reddit);
