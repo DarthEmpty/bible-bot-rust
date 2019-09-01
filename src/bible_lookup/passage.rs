@@ -19,7 +19,7 @@ impl From<Value> for Passage {
 
 impl ToString for Passage {
     fn to_string(&self) -> String {
-        let mut keys: Vec<u8> = self
+        let mut keys: Vec<usize> = self
             .0
             .keys()
             .map(|k| k.parse::<_>().unwrap_or_default())

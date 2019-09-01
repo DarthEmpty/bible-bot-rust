@@ -26,15 +26,18 @@ fn get_comments(reddit: &App) -> Listing<Comment> {
 }
 
 fn main() {
+    const ID_DEQUE_CAPACITY: usize = 500;
+
     let bucket = s3_access::create_bucket().expect("Could not create bucket");
 
     let config = s3_access::load_config(&bucket).expect("Could not load config");
     let reddit = create_app(config);
 
     let comments = get_comments(&reddit);
-    let mut past_comments = BoundedVecDeque::from_iter(s3_access::load_past_comments(&bucket).unwrap_or_default(), 500);
+    let read_comment_ids = s3_access::load_comment_ids(&bucket).unwrap_or_default();
+    let mut id_queue = BoundedVecDeque::from_iter(read_comment_ids, ID_DEQUE_CAPACITY);
 
-    past_comments.extend(comments.filter_map(|comment| { 
+    id_queue.extend(comments.filter_map(|comment| { 
         let refs = bible_lookup::extract_refs(&comment.body);
 
         if refs.is_empty() {
@@ -47,5 +50,5 @@ fn main() {
         reddit.comment(&reply_body, &comment.id).ok().map(|_| String::from(comment.id))
     }));
     
-    s3_access::save_past_comments(Vec::from(past_comments.into_unbounded()), &bucket);    
+    s3_access::save_comment_ids(Vec::from(id_queue.into_unbounded()), &bucket).expect("Could not save comment ids");    
 }
