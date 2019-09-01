@@ -30,16 +30,13 @@ fn test_extract_passage() {
 fn test_extract_passage_info() {
     let text = fetch_ref("John3:16-17").unwrap();
     let mut json = serde_json::from_str(&text).unwrap();
-
-    println!("{:?}", json);
-
     let passage_info = extract_passage_info(&mut json);
     assert!(passage_info.is_some());
 }
 
 #[test]
 fn test_refs_to_passages() {
-    let passage_pairs = refs_to_passage_pairs(vec![String::from("John3:16-17"), String::from("1Corinthians13")]);
+    let passage_pairs = refs_to_passage_pairs(vec!["John3:16-17".into(), "1Corinthians13".into()]);
     let res: Vec<Option<(PassageInfo, Passage)>> = passage_pairs
         .into_iter()
         .filter(|pair| pair.is_none())
@@ -59,7 +56,7 @@ fn test_build_reply() {
 
 #[test]
 fn test_build_replies() {
-    let refs = vec![String::from("John3:16-17"), String::from("1Corinthians13")];
+    let refs = vec!["John3:16-17".into(), "1Corinthians13".into()];
     let pairs = refs_to_passage_pairs(refs);
     let replies = build_replies(pairs);
     assert!(!replies.contains("Could not find requested passage"));
