@@ -11,6 +11,7 @@ pub fn extract_refs(text: &str) -> Vec<String> {
     // <book><chapter> (book may have digit as prefix)
     // <book><chapter>:<verse>
     // <book><chapter>:<verse>-<verse>
+    // TODO: Make this a const
     const PATTERN_STRING: &str = r"\[\[(\d?[a-zA-Z]+\d+(?::\d+(?:-\d+)?)?)\]\]";
     let pattern = Regex::new(PATTERN_STRING).unwrap();
     let string = text.replace(" ", "").replace("\\", "");
@@ -22,6 +23,7 @@ pub fn extract_refs(text: &str) -> Vec<String> {
 }
 
 fn fetch_ref(reference: &str) -> Result<String, reqwest::Error> {
+    // TODO: MAKE this a const 
     let url = format!("https://getbible.net/json?text={}", reference);
     let text: String = reqwest::get(&url)?
         .text()?
@@ -31,6 +33,7 @@ fn fetch_ref(reference: &str) -> Result<String, reqwest::Error> {
     Ok(text)
 }
 
+// TODO: Is this best as a part of a constructor on your passage struct?
 fn extract_passage(json: &mut Value) -> Option<Passage> {
     match json["type"].as_str().unwrap_or_default() {
         "chapter" => Some(Passage::from(json["chapter"].take())),
@@ -39,17 +42,20 @@ fn extract_passage(json: &mut Value) -> Option<Passage> {
     }
 }
 
+
+// TODO: Is this best on your passage struct?
 fn extract_passage_info(json: &mut Value) -> Option<PassageInfo> {
     match json["type"].as_str().unwrap_or_default() {
         "chapter" => Some(PassageInfo::new(
-            json["book_name"].take(),
-            json["chapter_nr"].take(),
-            json["version"].take(),
+            // TODO: Consider using .to_string() or some other strong typed value enum(?)
+            json["book_name"].clone(),
+            json["chapter_nr"].clone(),
+            json["version"].clone(),
         )),
         "verse" => Some(PassageInfo::new(
-            json["book"][0]["book_name"].take(),
-            json["book"][0]["chapter_nr"].take(),
-            json["version"].take(),
+            json["book"][0]["book_name"].clone(),
+            json["book"][0]["chapter_nr"].clone(),
+            json["version"].clone(),
         )),
         _ => None,
     }
@@ -59,10 +65,10 @@ pub fn refs_to_passage_pairs(refs: Vec<String>) -> Vec<Option<(PassageInfo, Pass
     refs.into_iter()
         .map(|reference| {
             let text = fetch_ref(&reference).unwrap_or_default();
-            let mut json = serde_json::from_str(&text).unwrap_or_default();
+            let json = serde_json::from_str(&text).unwrap_or_default();
 
-            let passage_info = extract_passage_info(&mut json);
-            let passage = extract_passage(&mut json);
+            let passage_info = extract_passage_info(&json);
+            let passage = extract_passage(&json);
 
             if (passage_info.is_none()) || (passage.is_none()) {
                 return None;
@@ -72,7 +78,7 @@ pub fn refs_to_passage_pairs(refs: Vec<String>) -> Vec<Option<(PassageInfo, Pass
         .collect()
 }
 
-fn build_reply(info: PassageInfo, passage: Passage) -> String {
+fn build_reply(info: &PassageInfo, passage: &Passage) -> String {
     format!("{}\n\n{}", info.to_string(), passage.to_string())
 }
 
@@ -80,11 +86,14 @@ pub fn build_replies(passage_pairs: Vec<Option<(PassageInfo, Passage)>>) -> Stri
     passage_pairs
         .into_iter()
         .map(|pair| {
+            // TODO: Use a match
             if pair.is_some() {
                 let unwrapped = pair.unwrap();
-                return build_reply(unwrapped.0, unwrapped.1);
+                return build_reply(&unwrapped.0, &unwrapped.1);
             }
 
+            // TODO: Consider using an error type?
+            // TODO: Then you can send an error message back to Reddit for errors of that type rather than having it appear as a success value
             String::from("Could not find requested passage\n\n")
         })
         .collect::<Vec<String>>()

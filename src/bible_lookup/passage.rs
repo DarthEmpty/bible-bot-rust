@@ -12,7 +12,7 @@ use std::collections::HashMap;
 pub struct Passage(HashMap<String, HashMap<String, Value>>);
 
 impl From<Value> for Passage {
-    fn from(v: Value) -> Passage {
+    fn from(v: Value) -> Self {
         serde_json::from_value(v).unwrap_or_default()
     }
 }
@@ -34,7 +34,7 @@ impl ToString for Passage {
                     .0
                     .get(&k)
                     .and_then(|v| v.get("verse"))
-                    .and_then(|verse_value| verse_value.as_str());
+                    .and_then(Value::as_str);
                 format!("^({}) {}", k, verse.unwrap_or_default())
             })
             .collect::<String>()

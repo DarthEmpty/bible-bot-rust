@@ -1,3 +1,4 @@
+#![warn(clippy::all, clippy::pedantic)]
 mod bible_lookup;
 mod s3_access;
 
@@ -5,6 +6,9 @@ use bounded_vec_deque::BoundedVecDeque;
 use orca::{data::Comment, data::Listing, App};
 use std::collections::HashMap;
 
+// TODO: Do some logging
+
+// TODO: Config should be a strongly typed struct
 fn create_app(config: HashMap<String, String>) -> App {
     let mut app = App::new(&config["app_name"], &config["version"], &config["author"])
         .expect("Could not create Reddit instance");
@@ -21,17 +25,23 @@ fn create_app(config: HashMap<String, String>) -> App {
 }
 
 fn get_comments(reddit: &App) -> Listing<Comment> {
+    // TODO: Should be an environment variable
     const SUB: &str = "pythonforengineers";
+
+    // TODO: Should be an environment variable
     const COMMENT_LIMIT: i32 = 100;
 
+    // TODO: Use the 'before' argument
     reddit
         .get_recent_comments(SUB, Some(COMMENT_LIMIT), None)
         .expect("Could not retrieve comments")
 }
 
 fn respond_to_comment(comment: Comment, reddit: &App) -> Option<String> {
+    // TODO: Change extract refs to return Option<Vec> or Result<Vec, E>
     let refs = bible_lookup::extract_refs(&comment.body);
 
+    // TODO: Then this can go
     if refs.is_empty() {
         return None;
     }
@@ -39,10 +49,10 @@ fn respond_to_comment(comment: Comment, reddit: &App) -> Option<String> {
     let passage_pairs = bible_lookup::refs_to_passage_pairs(refs);
     let reply_body = bible_lookup::build_replies(passage_pairs);
 
-    let res: Result<_, _> = reddit.comment(&reply_body, &comment.name);
-    match res.is_ok() {
-        true => Some(comment.id),
-        _ => None,
+    match reddit.comment(&reply_body, &comment.name) {
+        Ok(_) => Some(comment.id),
+        // TODO: Silently fails
+        Err(_) => None,
     }
 }
 
@@ -57,8 +67,7 @@ fn main() {
     let comments = get_comments(&reddit);
     let read_comment_ids = s3_access::load_comment_ids(&bucket).unwrap_or_default();
     let mut id_queue = BoundedVecDeque::from_iter(read_comment_ids, ID_DEQUE_CAPACITY);
-
-    let new_read_comment_ids: Vec<_> = comments
+    let comment_ids_responded_to: Vec<_> = comments
         .filter_map(|comment| {
             if (&mut id_queue).contains(&comment.id) {
                 return None;
@@ -67,7 +76,7 @@ fn main() {
         })
         .collect();
 
-    id_queue.extend(new_read_comment_ids);
+    id_queue.extend(comment_ids_responded_to);
 
     s3_access::save_comment_ids(Vec::from(id_queue.into_unbounded()), &bucket)
         .expect("Could not save comment ids");
