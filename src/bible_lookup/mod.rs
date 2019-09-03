@@ -34,17 +34,17 @@ fn fetch_ref(reference: &str) -> Result<String, reqwest::Error> {
 }
 
 // TODO: Is this best as a part of a constructor on your passage struct?
-fn extract_passage(json: &mut Value) -> Option<Passage> {
+fn extract_passage(json: &Value) -> Option<Passage> {
     match json["type"].as_str().unwrap_or_default() {
-        "chapter" => Some(Passage::from(json["chapter"].take())),
-        "verse" => Some(Passage::from(json["book"][0]["chapter"].take())),
+        "chapter" => Some(Passage::from(json["chapter"].clone())),
+        "verse" => Some(Passage::from(json["book"][0]["chapter"].clone())),
         _ => None,
     }
 }
 
 
 // TODO: Is this best on your passage struct?
-fn extract_passage_info(json: &mut Value) -> Option<PassageInfo> {
+fn extract_passage_info(json: &Value) -> Option<PassageInfo> {
     match json["type"].as_str().unwrap_or_default() {
         "chapter" => Some(PassageInfo::new(
             // TODO: Consider using .to_string() or some other strong typed value enum(?)
