@@ -50,7 +50,7 @@ fn test_build_reply() {
     let mut json = serde_json::from_str(&text).unwrap();
     let passage = extract_passage(&mut json).unwrap();
     let passage_info = extract_passage_info(&mut json).unwrap();
-    let reply = build_reply(passage_info, passage);
+    let reply = build_reply(&passage_info, &passage);
     assert!(!reply.is_empty());
 }
 
