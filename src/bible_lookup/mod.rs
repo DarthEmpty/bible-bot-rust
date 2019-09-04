@@ -44,15 +44,15 @@ fn extract_passage(json: &Value) -> Option<Passage> {
 
 
 // TODO: Is this best on your passage struct?
-fn extract_passage_info(json: &Value) -> Option<PassageInfo> {
+fn extract_passage_info(json: &Value) -> Option<Info> {
     match json["type"].as_str().unwrap_or_default() {
-        "chapter" => Some(PassageInfo::new(
+        "chapter" => Some(Info::new(
             // TODO: Consider using .to_string() or some other strong typed value enum(?)
             json["book_name"].clone(),
             json["chapter_nr"].clone(),
             json["version"].clone(),
         )),
-        "verse" => Some(PassageInfo::new(
+        "verse" => Some(Info::new(
             json["book"][0]["book_name"].clone(),
             json["book"][0]["chapter_nr"].clone(),
             json["version"].clone(),
@@ -61,7 +61,7 @@ fn extract_passage_info(json: &Value) -> Option<PassageInfo> {
     }
 }
 
-pub fn refs_to_passage_pairs(refs: Vec<String>) -> Vec<Option<(PassageInfo, Passage)>> {
+pub fn refs_to_passage_pairs(refs: Vec<String>) -> Vec<Option<(Info, Passage)>> {
     refs.into_iter()
         .map(|reference| {
             let text = fetch_ref(&reference).unwrap_or_default();
@@ -78,11 +78,11 @@ pub fn refs_to_passage_pairs(refs: Vec<String>) -> Vec<Option<(PassageInfo, Pass
         .collect()
 }
 
-fn build_reply(info: &PassageInfo, passage: &Passage) -> String {
+fn build_reply(info: &Info, passage: &Passage) -> String {
     format!("{}\n\n{}", info.to_string(), passage.to_string())
 }
 
-pub fn build_replies(passage_pairs: Vec<Option<(PassageInfo, Passage)>>) -> String {
+pub fn build_replies(passage_pairs: Vec<Option<(Info, Passage)>>) -> String {
     passage_pairs
         .into_iter()
         .map(|pair| {

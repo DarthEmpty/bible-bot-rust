@@ -41,23 +41,23 @@ impl ToString for Passage {
     }
 }
 
-pub struct PassageInfo {
+pub struct Info {
     book: String,
     chapter: String,
     version: String,
 }
 
-impl PassageInfo {
-    pub fn new(book: Value, chapter: Value, version: Value) -> PassageInfo {
-        PassageInfo {
-            book: String::from(book.as_str().unwrap_or_default()),
-            chapter: String::from(chapter.as_str().unwrap_or_default()),
-            version: String::from(version.as_str().unwrap_or_default()),
+impl Info {
+    pub fn new(book: Value, chapter: Value, version: Value) -> Self {
+        Info {
+            book: book.as_str().unwrap_or_default().into(),
+            chapter: chapter.as_str().unwrap_or_default().into(),
+            version: version.as_str().unwrap_or_default().into(),
         }
     }
 }
 
-impl ToString for PassageInfo {
+impl ToString for Info {
     fn to_string(&self) -> String {
         format!("{} {} ({})", self.book, self.chapter, self.version)
     }
