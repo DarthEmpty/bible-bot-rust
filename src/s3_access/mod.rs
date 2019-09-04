@@ -1,6 +1,9 @@
+pub mod config;
+mod tests;
+
+use config::Config;
 use s3::{self, bucket::Bucket, credentials::Credentials, error::S3Result, region::Region};
 use serde_json;
-use std::collections::HashMap;
 use toml;
 
 pub fn create_bucket() -> S3Result<Bucket> {
@@ -33,7 +36,7 @@ fn put_in_bucket(
     }
 }
 
-pub fn load_config(bucket: &Bucket) -> Option<HashMap<String, String>> {
+pub fn load_config(bucket: &Bucket) -> Option<Config> {
     const CONFIG_FILE: &str = "config.toml";
     get_from_bucket(CONFIG_FILE, bucket).and_then(|s| toml::from_str(&s).ok())
 }

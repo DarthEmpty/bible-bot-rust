@@ -4,20 +4,20 @@ mod s3_access;
 
 use bounded_vec_deque::BoundedVecDeque;
 use orca::{data::Comment, data::Listing, App};
-use std::collections::HashMap;
+use s3_access::config::Config;
 
 // TODO: Do some logging
 
 // TODO: Config should be a strongly typed struct
-fn create_app(config: HashMap<String, String>) -> App {
-    let mut app = App::new(&config["app_name"], &config["version"], &config["author"])
+fn create_app(config: &Config) -> App {
+    let mut app = App::new(&config.app_name, &config.version, &config.author)
         .expect("Could not create Reddit instance");
 
     app.authorize_script(
-        &config["client_id"],
-        &config["client_secret"],
-        &config["username"],
-        &config["password"],
+        &config.client_id,
+        &config.client_secret,
+        &config.username,
+        &config.password,
     )
     .expect("Could not authorize script");
 
@@ -62,7 +62,7 @@ fn main() {
     let bucket = s3_access::create_bucket().expect("Could not create bucket");
 
     let config = s3_access::load_config(&bucket).expect("Could not load config");
-    let reddit = create_app(config);
+    let reddit = create_app(&config);
 
     let comments = get_comments(&reddit);
     let read_comment_ids = s3_access::load_comment_ids(&bucket).unwrap_or_default();
