@@ -8,7 +8,6 @@ use s3_access::config::Config;
 
 // TODO: Do some logging
 
-// TODO: Config should be a strongly typed struct
 fn create_app(config: &Config) -> App {
     let mut app = App::new(&config.app_name, &config.version, &config.author)
         .expect("Could not create Reddit instance");
