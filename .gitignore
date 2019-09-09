@@ -3,3 +3,4 @@
 **/*.rs.bk
 config.toml
 read_comments.json
+setup_env.sh

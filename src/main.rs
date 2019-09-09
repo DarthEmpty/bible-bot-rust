@@ -24,15 +24,12 @@ fn create_app(config: &Config) -> App {
 }
 
 fn get_comments(reddit: &App) -> Listing<Comment> {
-    // TODO: Should be an environment variable
-    const SUB: &str = "pythonforengineers";
-
-    // TODO: Should be an environment variable
-    const COMMENT_LIMIT: i32 = 100;
+    let sub = env!("SUBREDDIT");
+    let comment_limit: i32 = env!("COMMENT_LIMIT").parse().unwrap_or(100);
 
     // TODO: Use the 'before' argument
     reddit
-        .get_recent_comments(SUB, Some(COMMENT_LIMIT), None)
+        .get_recent_comments(sub, Some(comment_limit), None)
         .expect("Could not retrieve comments")
 }
 
