@@ -4,7 +4,7 @@ use super::*;
 
 #[test]
 fn test_load_config() {
-    let bucket = create_bucket().unwrap();
+    let bucket = connect_to_bucket().unwrap();
     let config = load_config(&bucket);
 
     println!("{:?}", config);

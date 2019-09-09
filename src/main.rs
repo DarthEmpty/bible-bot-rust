@@ -2,7 +2,7 @@
 mod bible_lookup;
 mod s3_access;
 
-use bounded_vec_deque::BoundedVecDeque;
+use failure::Error;
 use orca::{data::Comment, App};
 use s3_access::config::Config;
 
@@ -23,51 +23,42 @@ fn create_app(config: &Config) -> App {
     app
 }
 
-fn respond_to_comment(comment: Comment, reddit: &App) -> Option<String> {
+fn respond_to_comment(comment: &Comment, reddit: &App) -> Result<(), Error> {
     // TODO: Change extract refs to return Option<Vec> or Result<Vec, E>
     let refs = bible_lookup::extract_refs(&comment.body);
 
-    // TODO: Then this can go
-    if refs.is_empty() {
-        return None;
-    }
+    // TODO: Handle result from extract refs
 
     let passage_pairs = bible_lookup::refs_to_passage_pairs(refs);
     let reply_body = bible_lookup::build_replies(passage_pairs);
 
-    match reddit.comment(&reply_body, &comment.name) {
-        Ok(_) => Some(comment.id),
-        // TODO: Silently fails
-        Err(_) => None,
-    }
+    reddit.comment(&reply_body, &comment.name)
 }
 
 fn main() {
-    const ID_DEQUE_CAPACITY: usize = 500;
     let sub = env!("SUBREDDIT");
     let limit: i32 = env!("COMMENT_LIMIT").parse().unwrap_or(100);
+    let bm_file = env!("BOOKMARK_FILE");
 
-    let bucket = s3_access::create_bucket().expect("Could not create bucket");
+    let bucket = s3_access::connect_to_bucket().expect("Could not connect to bucket");
 
     let config = s3_access::load_config(&bucket).expect("Could not load config");
     let reddit = create_app(&config);
 
+    let bookmark_name = s3_access::load_file(bm_file, &bucket).unwrap_or_default();
+    let mut new_bookmark_name = String::default();
+
     let comments = reddit
-        .get_recent_comments(sub, Some(limit), None)
+        .get_recent_comments(sub, Some(limit), Some(&bookmark_name))
         .expect("Could not retrieve comments");
-    let read_comment_ids = s3_access::load_comment_ids(&bucket).unwrap_or_default();
-    let mut id_queue = BoundedVecDeque::from_iter(read_comment_ids, ID_DEQUE_CAPACITY);
-    let comment_ids_responded_to: Vec<_> = comments
-        .filter_map(|comment| {
-            if (&mut id_queue).contains(&comment.id) {
-                return None;
-            }
-            respond_to_comment(comment, &reddit)
-        })
-        .collect();
+    
+    comments.enumerate().for_each(|(i, c)| {
+        if i == 0 {
+            new_bookmark_name = c.name.clone();
+        }
 
-    id_queue.extend(comment_ids_responded_to);
+        respond_to_comment(&c, &reddit);
+    });
 
-    s3_access::save_comment_ids(Vec::from(id_queue.into_unbounded()), &bucket)
-        .expect("Could not save comment ids");
+    s3_access::save_file(bm_file, &new_bookmark_name, "text/plain", &bucket);
 }
