@@ -3,7 +3,7 @@ mod bible_lookup;
 mod s3_access;
 
 use bounded_vec_deque::BoundedVecDeque;
-use orca::{data::Comment, data::Listing, App};
+use orca::{data::Comment, App};
 use s3_access::config::Config;
 
 // TODO: Do some logging
@@ -21,16 +21,6 @@ fn create_app(config: &Config) -> App {
     .expect("Could not authorize script");
 
     app
-}
-
-fn get_comments(reddit: &App) -> Listing<Comment> {
-    let sub = env!("SUBREDDIT");
-    let comment_limit: i32 = env!("COMMENT_LIMIT").parse().unwrap_or(100);
-
-    // TODO: Use the 'before' argument
-    reddit
-        .get_recent_comments(sub, Some(comment_limit), None)
-        .expect("Could not retrieve comments")
 }
 
 fn respond_to_comment(comment: Comment, reddit: &App) -> Option<String> {
@@ -54,13 +44,17 @@ fn respond_to_comment(comment: Comment, reddit: &App) -> Option<String> {
 
 fn main() {
     const ID_DEQUE_CAPACITY: usize = 500;
+    let sub = env!("SUBREDDIT");
+    let limit: i32 = env!("COMMENT_LIMIT").parse().unwrap_or(100);
 
     let bucket = s3_access::create_bucket().expect("Could not create bucket");
 
     let config = s3_access::load_config(&bucket).expect("Could not load config");
     let reddit = create_app(&config);
 
-    let comments = get_comments(&reddit);
+    let comments = reddit
+        .get_recent_comments(sub, Some(limit), None)
+        .expect("Could not retrieve comments");
     let read_comment_ids = s3_access::load_comment_ids(&bucket).unwrap_or_default();
     let mut id_queue = BoundedVecDeque::from_iter(read_comment_ids, ID_DEQUE_CAPACITY);
     let comment_ids_responded_to: Vec<_> = comments
