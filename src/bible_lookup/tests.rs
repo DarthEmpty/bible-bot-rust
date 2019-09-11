@@ -21,16 +21,16 @@ fn test_fetch_ref() {
 #[test]
 fn test_extract_passage() {
     let text = fetch_ref("John3:16-17").unwrap();
-    let mut json = serde_json::from_str(&text).unwrap();
-    let passage = extract_passage(&mut json);
+    let json = serde_json::from_str(&text).unwrap();
+    let passage = extract_passage(&json);
     assert!(passage.is_some());
 }
 
 #[test]
 fn test_extract_passage_info() {
     let text = fetch_ref("John3:16-17").unwrap();
-    let mut json = serde_json::from_str(&text).unwrap();
-    let passage_info = extract_passage_info(&mut json);
+    let json = serde_json::from_str(&text).unwrap();
+    let passage_info = extract_passage_info(&json);
     assert!(passage_info.is_some());
 }
 
@@ -39,7 +39,7 @@ fn test_refs_to_passages() {
     let passage_pairs = refs_to_passage_pairs(vec!["John3:16-17".into(), "1Corinthians13".into()]);
     let res: Vec<Option<(Info, Passage)>> = passage_pairs
         .into_iter()
-        .filter(|pair| pair.is_none())
+        .filter(Option::is_none)
         .collect();
     assert!(res.is_empty());
 }
@@ -47,9 +47,9 @@ fn test_refs_to_passages() {
 #[test]
 fn test_build_reply() {
     let text = fetch_ref("John3:16-18").unwrap();
-    let mut json = serde_json::from_str(&text).unwrap();
-    let passage = extract_passage(&mut json).unwrap();
-    let passage_info = extract_passage_info(&mut json).unwrap();
+    let json = serde_json::from_str(&text).unwrap();
+    let passage = extract_passage(&json).unwrap();
+    let passage_info = extract_passage_info(&json).unwrap();
     let reply = build_reply(&passage_info, &passage);
     assert!(!reply.is_empty());
 }

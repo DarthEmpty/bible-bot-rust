@@ -48,8 +48,8 @@ pub struct Info {
 }
 
 impl Info {
-    pub fn new(book: Value, chapter: Value, version: Value) -> Self {
-        Info {
+    pub fn new(book: &Value, chapter: &Value, version: &Value) -> Self {
+        Self {
             book: book.as_str().unwrap_or_default().into(),
             chapter: chapter.as_str().unwrap_or_default().into(),
             version: version.as_str().unwrap_or_default().into(),

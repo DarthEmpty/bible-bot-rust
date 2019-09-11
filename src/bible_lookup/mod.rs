@@ -48,14 +48,14 @@ fn extract_passage_info(json: &Value) -> Option<Info> {
     match json["type"].as_str().unwrap_or_default() {
         "chapter" => Some(Info::new(
             // TODO: Consider using .to_string() or some other strong typed value enum(?)
-            json["book_name"].clone(),
-            json["chapter_nr"].clone(),
-            json["version"].clone(),
+            &json["book_name"].clone(),
+            &json["chapter_nr"].clone(),
+            &json["version"].clone(),
         )),
         "verse" => Some(Info::new(
-            json["book"][0]["book_name"].clone(),
-            json["book"][0]["chapter_nr"].clone(),
-            json["version"].clone(),
+            &json["book"][0]["book_name"].clone(),
+            &json["book"][0]["chapter_nr"].clone(),
+            &json["version"].clone(),
         )),
         _ => None,
     }
