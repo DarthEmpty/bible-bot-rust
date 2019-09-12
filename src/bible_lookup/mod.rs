@@ -1,3 +1,4 @@
+mod constants;
 mod passage;
 mod tests;
 
@@ -11,9 +12,7 @@ pub fn extract_refs(text: &str) -> Vec<String> {
     // <book><chapter> (book may have digit as prefix)
     // <book><chapter>:<verse>
     // <book><chapter>:<verse>-<verse>
-    // TODO: Make this a const
-    const PATTERN_STRING: &str = r"\[\[(\d?[a-zA-Z]+\d+(?::\d+(?:-\d+)?)?)\]\]";
-    let pattern = Regex::new(PATTERN_STRING).unwrap();
+    let pattern = Regex::new(constants::REFERENCE_PATTERN).unwrap();
     let string = text.replace(" ", "").replace("\\", "");
 
     pattern
@@ -23,8 +22,7 @@ pub fn extract_refs(text: &str) -> Vec<String> {
 }
 
 fn fetch_ref(reference: &str) -> Result<String, reqwest::Error> {
-    // TODO: MAKE this a const 
-    let url = format!("https://getbible.net/json?text={}", reference);
+    let url = format!("{}{}", constants::BIBLE_API_URL, reference);
     let text: String = reqwest::get(&url)?
         .text()?
         .replace("(", "")
