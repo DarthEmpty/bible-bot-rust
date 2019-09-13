@@ -9,7 +9,13 @@ fn test_extract_refs() {
         and I wanna look at [[1Corinthians13]]",
     );
 
-    assert_eq!(refs, vec!["John3:16-17", "1Corinthians13"]);
+    assert_eq!(refs.unwrap(), vec!["John3:16-17", "1Corinthians13"]);
+
+    let no_refs = extract_refs(
+        "You have no references here, Gandalf the Grey!"
+    );
+
+    assert!(no_refs.is_err());
 }
 
 #[test]

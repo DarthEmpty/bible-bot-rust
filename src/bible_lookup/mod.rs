@@ -2,12 +2,13 @@ mod constants;
 mod passage;
 mod tests;
 
+use crate::err::{BibleBotError, BibleBotResult};
 use passage::*;
 use regex::Regex;
 use reqwest;
 use serde_json::{self, Value};
 
-pub fn extract_refs(text: &str) -> Vec<String> {
+pub fn extract_refs(text: &str) -> BibleBotResult<Vec<String>> {
     // Matches with:
     // <book><chapter> (book may have digit as prefix)
     // <book><chapter>:<verse>
@@ -15,10 +16,16 @@ pub fn extract_refs(text: &str) -> Vec<String> {
     let pattern = Regex::new(constants::REFERENCE_PATTERN).unwrap();
     let string = text.replace(" ", "").replace("\\", "");
 
-    pattern
+    let res: Vec<String> = pattern
         .captures_iter(&string)
-        .map(|cap| String::from(cap.get(1).unwrap().as_str()))
-        .collect()
+        .filter_map(|cap| cap.get(1).and_then(|m| Some(String::from(m.as_str()))))
+        .collect();
+
+    if res.is_empty() {
+        Err(BibleBotError::NoRefs)
+    } else {
+        Ok(res)
+    }
 }
 
 fn fetch_ref(reference: &str) -> Result<String, reqwest::Error> {
@@ -39,7 +46,6 @@ fn extract_passage(json: &Value) -> Option<Passage> {
         _ => None,
     }
 }
-
 
 // TODO: Is this best on your passage struct?
 fn extract_passage_info(json: &Value) -> Option<Info> {

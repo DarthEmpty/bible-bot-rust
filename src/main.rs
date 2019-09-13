@@ -1,5 +1,6 @@
 #![warn(clippy::all, clippy::pedantic)]
 mod bible_lookup;
+mod err;
 mod s3_access;
 
 use failure::Error;
@@ -24,10 +25,7 @@ fn create_app(config: &Config) -> App {
 }
 
 fn respond_to_comment(comment: &Comment, reddit: &App) -> Result<(), Error> {
-    // TODO: Change extract refs to return Option<Vec> or Result<Vec, E>
-    let refs = bible_lookup::extract_refs(&comment.body);
-
-    // TODO: Handle result from extract refs
+    let refs = bible_lookup::extract_refs(&comment.body)?;
 
     let passage_pairs = bible_lookup::refs_to_passage_pairs(refs);
     let reply_body = bible_lookup::build_replies(passage_pairs);
@@ -51,6 +49,7 @@ fn main() {
     let comments = reddit
         .get_recent_comments(sub, Some(limit), Some(&bookmark_name))
         .expect("Could not retrieve comments");
+    
     
     comments.enumerate().for_each(|(i, c)| {
         if i == 0 {
