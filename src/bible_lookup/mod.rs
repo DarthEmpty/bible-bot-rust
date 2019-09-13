@@ -90,15 +90,15 @@ pub fn build_replies(passage_pairs: Vec<Option<(Info, Passage)>>) -> String {
     passage_pairs
         .into_iter()
         .map(|pair| {
-            // TODO: Use a match
-            if pair.is_some() {
-                let unwrapped = pair.unwrap();
-                return build_reply(&unwrapped.0, &unwrapped.1);
+            match pair {
+                Some(_) => {
+                    let unwrapped = pair.unwrap();
+                    build_reply(&unwrapped.0, &unwrapped.1)
+                }
+                // TODO: Consider using an error type?
+                // TODO: Then you can send an error message back to Reddit for errors of that type rather than having it appear as a success value
+                _ => String::from("Could not find requested passage\n\n")
             }
-
-            // TODO: Consider using an error type?
-            // TODO: Then you can send an error message back to Reddit for errors of that type rather than having it appear as a success value
-            String::from("Could not find requested passage\n\n")
         })
         .collect::<Vec<String>>()
         .join("\n---\n")
