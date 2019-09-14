@@ -6,7 +6,7 @@ use crate::err::{BibleBotError, BibleBotResult};
 use passage::*;
 use regex::Regex;
 use reqwest;
-use serde_json::{self, Value};
+use serde_json;
 
 pub fn extract_refs(text: &str) -> BibleBotResult<Vec<String>> {
     // Matches with:
@@ -38,43 +38,16 @@ fn fetch_ref(reference: &str) -> Result<String, reqwest::Error> {
     Ok(text)
 }
 
-// TODO: Is this best as a part of a constructor on your passage struct?
-fn extract_passage(json: &Value) -> Option<Passage> {
-    match json["type"].as_str().unwrap_or_default() {
-        "chapter" => Some(Passage::from(json["chapter"].clone())),
-        "verse" => Some(Passage::from(json["book"][0]["chapter"].clone())),
-        _ => None,
-    }
-}
-
-// TODO: Is this best on your passage struct?
-fn extract_passage_info(json: &Value) -> Option<Info> {
-    match json["type"].as_str().unwrap_or_default() {
-        "chapter" => Some(Info::new(
-            // TODO: Consider using .to_string() or some other strong typed value enum(?)
-            &json["book_name"].clone(),
-            &json["chapter_nr"].clone(),
-            &json["version"].clone(),
-        )),
-        "verse" => Some(Info::new(
-            &json["book"][0]["book_name"].clone(),
-            &json["book"][0]["chapter_nr"].clone(),
-            &json["version"].clone(),
-        )),
-        _ => None,
-    }
-}
-
 pub fn refs_to_passage_pairs(refs: Vec<String>) -> Vec<Option<(Info, Passage)>> {
     refs.into_iter()
         .map(|reference| {
             let text = fetch_ref(&reference).unwrap_or_default();
             let json = serde_json::from_str(&text).unwrap_or_default();
 
-            let passage_info = extract_passage_info(&json);
-            let passage = extract_passage(&json);
+            let passage_info = Info::new(&json);
+            let passage = Passage::new(&json);
 
-            if (passage_info.is_none()) || (passage.is_none()) {
+            if passage_info.is_err() || passage.is_err() {
                 return None;
             }
             Some((passage_info.unwrap(), passage.unwrap()))
@@ -89,16 +62,14 @@ fn build_reply(info: &Info, passage: &Passage) -> String {
 pub fn build_replies(passage_pairs: Vec<Option<(Info, Passage)>>) -> String {
     passage_pairs
         .into_iter()
-        .map(|pair| {
-            match pair {
-                Some(_) => {
-                    let unwrapped = pair.unwrap();
-                    build_reply(&unwrapped.0, &unwrapped.1)
-                }
-                // TODO: Consider using an error type?
-                // TODO: Then you can send an error message back to Reddit for errors of that type rather than having it appear as a success value
-                _ => String::from("Could not find requested passage\n\n")
+        .map(|pair| match pair {
+            Some(_) => {
+                let unwrapped = pair.unwrap();
+                build_reply(&unwrapped.0, &unwrapped.1)
             }
+            // TODO: Consider using an error type?
+            // TODO: Then you can send an error message back to Reddit for errors of that type rather than having it appear as a success value
+            _ => String::from("Could not find requested passage\n\n"),
         })
         .collect::<Vec<String>>()
         .join("\n---\n")
