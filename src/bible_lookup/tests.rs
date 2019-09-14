@@ -43,11 +43,7 @@ fn test_info_constructor() {
 #[test]
 fn test_refs_to_passages() {
     let passage_pairs = refs_to_passage_pairs(vec!["John3:16-17".into(), "1Corinthians13".into()]);
-    let res: Vec<Option<(Info, Passage)>> = passage_pairs
-        .into_iter()
-        .filter(Option::is_none)
-        .collect();
-    assert!(res.is_empty());
+    assert_eq!(passage_pairs.len(), 2);
 }
 
 #[test]

@@ -3,7 +3,7 @@ mod bible_lookup;
 mod err;
 mod s3_access;
 
-use failure::Error;
+use failure;
 use orca::{data::Comment, App};
 use s3_access::config::Config;
 
@@ -24,7 +24,7 @@ fn create_app(config: &Config) -> App {
     app
 }
 
-fn respond_to_comment(comment: &Comment, reddit: &App) -> Result<(), Error> {
+fn respond_to_comment(comment: &Comment, reddit: &App) -> Result<(), failure::Error> {
     let refs = bible_lookup::extract_refs(&comment.body)?;
 
     let passage_pairs = bible_lookup::refs_to_passage_pairs(refs);

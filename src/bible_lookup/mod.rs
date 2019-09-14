@@ -38,19 +38,13 @@ fn fetch_ref(reference: &str) -> Result<String, reqwest::Error> {
     Ok(text)
 }
 
-pub fn refs_to_passage_pairs(refs: Vec<String>) -> Vec<Option<(Info, Passage)>> {
+pub fn refs_to_passage_pairs(refs: Vec<String>) -> Vec<BibleBotResult<(Info, Passage)>> {
     refs.into_iter()
         .map(|reference| {
-            let text = fetch_ref(&reference).unwrap_or_default();
-            let json = serde_json::from_str(&text).unwrap_or_default();
+            let text = fetch_ref(&reference)?;
+            let json = serde_json::from_str(&text)?;
 
-            let passage_info = Info::new(&json);
-            let passage = Passage::new(&json);
-
-            if passage_info.is_err() || passage.is_err() {
-                return None;
-            }
-            Some((passage_info.unwrap(), passage.unwrap()))
+            Ok((Info::new(&json)?, Passage::new(&json)?))
         })
         .collect()
 }
@@ -59,17 +53,12 @@ fn build_reply(info: &Info, passage: &Passage) -> String {
     format!("{}\n\n{}", info.to_string(), passage.to_string())
 }
 
-pub fn build_replies(passage_pairs: Vec<Option<(Info, Passage)>>) -> String {
+pub fn build_replies(passage_pairs: Vec<BibleBotResult<(Info, Passage)>>) -> String {
     passage_pairs
         .into_iter()
         .map(|pair| match pair {
-            Some(_) => {
-                let unwrapped = pair.unwrap();
-                build_reply(&unwrapped.0, &unwrapped.1)
-            }
-            // TODO: Consider using an error type?
-            // TODO: Then you can send an error message back to Reddit for errors of that type rather than having it appear as a success value
-            _ => String::from("Could not find requested passage\n\n"),
+            Ok(v) => build_reply(&v.0, &v.1),
+            Err(e) => format!("{}", e),
         })
         .collect::<Vec<String>>()
         .join("\n---\n")
