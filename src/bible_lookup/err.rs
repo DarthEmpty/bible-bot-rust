@@ -2,10 +2,10 @@ use failure::Fail;
 use reqwest;
 use serde_json;
 
-pub type BibleBotResult<T> = Result<T, BibleBotError>;
+pub type BibleLookupResult<T> = Result<T, BibleLookupError>;
 
 #[derive(Debug, Fail)]
-pub enum BibleBotError {
+pub enum BibleLookupError {
     #[fail(display = "No references were found.")]
     NoRefs,
 
@@ -17,19 +17,16 @@ pub enum BibleBotError {
 
     #[fail(display = "Passage could not be constructed as its type was neither a 'chapter' nor a 'verse'.")]
     BadPassageType,
-
-    #[fail(display = "Could not find requested passage: {}.", _0)]
-    PassageNotFound(&'static str),
 }
 
-impl From<reqwest::Error> for BibleBotError {
+impl From<reqwest::Error> for BibleLookupError {
     fn from(err: reqwest::Error) -> Self {
-        BibleBotError::Request(err)
+        BibleLookupError::Request(err)
     }
 }
 
-impl From<serde_json::Error> for BibleBotError {
+impl From<serde_json::Error> for BibleLookupError {
     fn from(err: serde_json::Error) -> Self {
-        BibleBotError::Parse(err)
+        BibleLookupError::Parse(err)
     }
 }

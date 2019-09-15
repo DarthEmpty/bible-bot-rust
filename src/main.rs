@@ -1,6 +1,5 @@
 #![warn(clippy::all, clippy::pedantic)]
 mod bible_lookup;
-mod err;
 mod s3_access;
 
 use failure;

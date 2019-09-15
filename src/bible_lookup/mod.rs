@@ -1,14 +1,15 @@
 mod constants;
+mod err;
 mod passage;
 mod tests;
 
-use crate::err::{BibleBotError, BibleBotResult};
+use err::{BibleLookupError, BibleLookupResult};
 use passage::*;
 use regex::Regex;
 use reqwest;
 use serde_json;
 
-pub fn extract_refs(text: &str) -> BibleBotResult<Vec<String>> {
+pub fn extract_refs(text: &str) -> BibleLookupResult<Vec<String>> {
     // Matches with:
     // <book><chapter> (book may have digit as prefix)
     // <book><chapter>:<verse>
@@ -22,7 +23,7 @@ pub fn extract_refs(text: &str) -> BibleBotResult<Vec<String>> {
         .collect();
 
     if res.is_empty() {
-        Err(BibleBotError::NoRefs)
+        Err(BibleLookupError::NoRefs)
     } else {
         Ok(res)
     }
@@ -38,7 +39,7 @@ fn fetch_ref(reference: &str) -> Result<String, reqwest::Error> {
     Ok(text)
 }
 
-pub fn refs_to_passage_pairs(refs: Vec<String>) -> Vec<BibleBotResult<(Info, Passage)>> {
+pub fn refs_to_passage_pairs(refs: Vec<String>) -> Vec<BibleLookupResult<(Info, Passage)>> {
     refs.into_iter()
         .map(|reference| {
             let text = fetch_ref(&reference)?;
@@ -53,7 +54,7 @@ fn build_reply(info: &Info, passage: &Passage) -> String {
     format!("{}\n\n{}", info.to_string(), passage.to_string())
 }
 
-pub fn build_replies(passage_pairs: Vec<BibleBotResult<(Info, Passage)>>) -> String {
+pub fn build_replies(passage_pairs: Vec<BibleLookupResult<(Info, Passage)>>) -> String {
     passage_pairs
         .into_iter()
         .map(|pair| match pair {

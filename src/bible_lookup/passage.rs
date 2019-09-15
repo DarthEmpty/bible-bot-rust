@@ -1,4 +1,4 @@
-use crate::err::{BibleBotError, BibleBotResult};
+use super::err::{BibleLookupError, BibleLookupResult};
 use serde::Deserialize;
 use serde_json::{self, Value};
 use std::collections::HashMap;
@@ -13,11 +13,11 @@ use std::collections::HashMap;
 pub struct Passage(HashMap<String, HashMap<String, Value>>);
 
 impl Passage {
-    pub fn new(v: &Value) -> BibleBotResult<Self> {
+    pub fn new(v: &Value) -> BibleLookupResult<Self> {
         let contents = match v["type"].as_str().unwrap_or_default() {
             "chapter" => Ok(v["chapter"].clone()),
             "verse" => Ok(v["book"][0]["chapter"].clone()),
-            _ => Err(BibleBotError::BadPassageType),
+            _ => Err(BibleLookupError::BadPassageType),
         }?;
 
         let res = serde_json::from_value(contents)?;
@@ -57,7 +57,7 @@ pub struct Info {
 }
 
 impl Info {
-    pub fn new(v: &Value) -> BibleBotResult<Self> {
+    pub fn new(v: &Value) -> BibleLookupResult<Self> {
         let (book, chapter, version) = match v["type"].as_str().unwrap_or_default() {
             "chapter" => Ok((
                 v["book"].clone(),
@@ -69,7 +69,7 @@ impl Info {
                 v["book"][0]["chapter_nr"].clone(),
                 v["version"].clone(),
             )),
-            _ => Err(BibleBotError::BadPassageType),
+            _ => Err(BibleLookupError::BadPassageType),
         }?;
 
         Ok(Self {
