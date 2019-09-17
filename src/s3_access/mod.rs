@@ -1,15 +1,13 @@
 pub mod config;
+mod constants;
 mod tests;
 
 use config::Config;
-use s3::{self, bucket::Bucket, credentials::Credentials, error::S3Result, region::Region};
+use s3::{self, bucket::Bucket, credentials::Credentials, error::S3Result};
 use toml;
 
 pub fn connect_to_bucket() -> S3Result<Bucket> {
-    const NAME: &str = "bible-bot";
-    const REGION: Region = Region::EuWest2;
-
-    Bucket::new(NAME, REGION, Credentials::default())
+    Bucket::new(constants::NAME, constants::REGION, Credentials::default())
 }
 
 pub fn load_file(filename: &str, bucket: &Bucket) -> Option<String> {
@@ -36,6 +34,5 @@ pub fn save_file(
 }
 
 pub fn load_config(bucket: &Bucket) -> Option<Config> {
-    const CONFIG_FILE: &str = "config.toml";
-    load_file(CONFIG_FILE, bucket).and_then(|s| toml::from_str(&s).ok())
+    load_file(constants::CONFIG_FILE, bucket).and_then(|s| toml::from_str(&s).ok())
 }
