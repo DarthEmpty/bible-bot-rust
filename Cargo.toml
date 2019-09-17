@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 failure = "0.1.5"
+log = "0.4.8"
 orca = "0.7.0"
 regex = "1.2.1"
 reqwest = "0.9.19"

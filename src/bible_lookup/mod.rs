@@ -1,5 +1,5 @@
+pub mod err;
 mod constants;
-mod err;
 mod passage;
 mod tests;
 
