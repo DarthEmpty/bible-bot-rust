@@ -2,5 +2,6 @@
 /target
 **/*.rs.bk
 config.toml
+log.txt
 read_comments.json
 setup_env.sh

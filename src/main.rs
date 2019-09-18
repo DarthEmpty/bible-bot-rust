@@ -7,9 +7,10 @@ use err::{BibleBotResult, BibleBotError};
 use failure;
 use log::{info, warn, error};
 use orca::{data::Comment, App};
+use simplelog::{self, LevelFilter, WriteLogger};
 use s3::bucket::Bucket;
 use s3_access::config::Config;
-use std::fs::write;
+use std::fs::{write, OpenOptions};
 
 fn create_app(config: &Config) -> App {
     let mut app = App::new(&config.app_name, &config.version, &config.author)
@@ -73,6 +74,17 @@ fn main() {
     let sub = env!("SUBREDDIT");
     let limit: i32 = env!("COMMENT_LIMIT").parse().unwrap_or(100);
     let bm_file = env!("BOOKMARK_FILE");
+    let log_file = env!("LOG_FILE");
+
+    WriteLogger::init(
+        LevelFilter::Info,
+        simplelog::Config::default(),
+        OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(log_file)
+            .unwrap()
+    ).expect("Logger could not be initialised.");
 
     info!("Connecting to S3 bucket...");
     let bucket = s3_access::connect_to_bucket().expect("Could not connect to bucket");
@@ -116,4 +128,6 @@ fn main() {
             _ => info!("{}: Successfully responded to!", c.name),
         }
     });
+
+    info!("Done!")
 }
