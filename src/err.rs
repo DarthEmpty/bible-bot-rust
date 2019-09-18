@@ -6,7 +6,7 @@ pub type BibleBotResult<T> = Result<T, BibleBotError>;
 #[derive(Debug, Fail)]
 pub enum BibleBotError {
     #[fail(display = "{}", _0)]
-    LookupError(BibleLookupError),
+    Lookup(BibleLookupError),
 
     #[fail(display = "Could not respond to Reddit comment: {}", _0)]
     RedditResponse(failure::Error)
@@ -14,7 +14,7 @@ pub enum BibleBotError {
 
 impl From<BibleLookupError> for BibleBotError {
     fn from(err: BibleLookupError) -> Self {
-        BibleBotError::LookupError(err)
+        BibleBotError::Lookup(err)
     }
 }
 

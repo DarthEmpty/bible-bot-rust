@@ -24,19 +24,17 @@ fn create_app(config: &Config) -> App {
     app
 }
 
-fn try_response(comment: &Comment, body: &str, reddit: &App, attempt_no: Option<usize>) -> BibleBotResult<()> {
-    let res = reddit.comment(body, &comment.name);
-
-    if res.is_ok() {
-        return Ok(());
-    }
-
-    let att = attempt_no.unwrap_or_default();
-    if att == 4 {
-        Err(BibleBotError::from(res.unwrap_err()))
-    } else {
-        warn!("Failed to respond to {}, retrying...", &comment.name);
-        try_response(comment, body, reddit, Some(att + 1))
+fn try_and_retry_response(comment: &Comment, body: &str, reddit: &App, tries: usize) -> BibleBotResult<()> {
+    match reddit.comment(body, &comment.name) {
+        Err(res) => {
+            if tries == 0 {
+                Err(BibleBotError::from(res))
+            } else {
+                warn!("Failed to respond to {}, retrying...", &comment.name);
+                try_and_retry_response(comment, body, reddit, tries - 1)
+            }
+        }
+        _ => Ok(())
     }
 }
 
@@ -46,7 +44,7 @@ fn respond_to_comment(comment: &Comment, reddit: &App) -> BibleBotResult<()> {
     let passage_pairs = bible_lookup::refs_to_passage_pairs(refs);
     let reply_body = bible_lookup::build_replies(passage_pairs);
 
-    try_response(comment, &reply_body, reddit, None)
+    try_and_retry_response(comment, &reply_body, reddit, 5)
 }
 
 fn main() {
@@ -62,7 +60,7 @@ fn main() {
     let reddit = create_app(&config);
 
     info!("Loading last read comment (bookmark)...");
-    let bookmark_name = if let Some(name) = s3_access::load_file(bm_file, &bucket) {
+    let bookmark_name = if let Ok(name) = s3_access::load_file(bm_file, &bucket) {
         info!("Bookmark found: {}", name);
         name
     } else {
@@ -85,7 +83,7 @@ fn main() {
         }
 
         match respond_to_comment(&c, &reddit) {
-            Err(BibleBotError::LookupError(e)) => warn!("{}: {}", c.name, e),
+            Err(BibleBotError::Lookup(e)) => warn!("{}: {}", c.name, e),
             Err(BibleBotError::RedditResponse(e)) => error!("{}: {}", c.name, e),
             Ok(_) => info!("{}: Successfully responded to!", c.name),
         }

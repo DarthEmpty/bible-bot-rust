@@ -9,5 +9,5 @@ fn test_load_config() {
 
     println!("{:?}", config);
 
-    assert!(config.is_some());
+    assert!(config.is_ok());
 }
