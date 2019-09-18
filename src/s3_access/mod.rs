@@ -1,6 +1,6 @@
 pub mod config;
+pub mod err;
 mod constants;
-mod err;
 mod tests;
 
 use config::Config;

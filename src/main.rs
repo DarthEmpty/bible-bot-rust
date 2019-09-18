@@ -7,7 +7,9 @@ use err::{BibleBotResult, BibleBotError};
 use failure;
 use log::{info, warn, error};
 use orca::{data::Comment, App};
+use s3::bucket::Bucket;
 use s3_access::config::Config;
+use std::fs::write;
 
 fn create_app(config: &Config) -> App {
     let mut app = App::new(&config.app_name, &config.version, &config.author)
@@ -26,9 +28,9 @@ fn create_app(config: &Config) -> App {
 
 fn try_and_retry_response(comment: &Comment, body: &str, reddit: &App, tries: usize) -> BibleBotResult<()> {
     match reddit.comment(body, &comment.name) {
-        Err(res) => {
+        Err(e) => {
             if tries == 0 {
-                Err(BibleBotError::from(res))
+                Err(BibleBotError::from(e))
             } else {
                 warn!("Failed to respond to {}, retrying...", &comment.name);
                 try_and_retry_response(comment, body, reddit, tries - 1)
@@ -45,6 +47,26 @@ fn respond_to_comment(comment: &Comment, reddit: &App) -> BibleBotResult<()> {
     let reply_body = bible_lookup::build_replies(passage_pairs);
 
     try_and_retry_response(comment, &reply_body, reddit, 5)
+}
+
+fn try_and_retry_save(
+    filename: &str,
+    content: &str,
+    content_type: &str,
+    bucket: &Bucket,
+    tries: usize,
+) -> BibleBotResult<()> {
+    match s3_access::save_file(filename, content, content_type, bucket) {
+        Err(e) => {
+            if tries == 0 {
+                Err(BibleBotError::from(e))
+            } else {
+                warn!("Failed to save {}, retrying...", filename);
+                try_and_retry_save(filename, content, content_type, bucket, tries - 1)
+            }
+        }
+        _ => Ok(()),
+    }
 }
 
 fn main() {
@@ -68,8 +90,6 @@ fn main() {
         String::default()
     };
 
-    let mut new_bookmark_name = String::default();
-
     info!("Loading most recent comments from {}...", sub);
     let comments = reddit
         .get_recent_comments(sub, Some(limit), Some(&bookmark_name))
@@ -79,15 +99,21 @@ fn main() {
     comments.enumerate().for_each(|(i, c)| {
         if i == 0 {
             info!("New bookmark found: {}", c.name);
-            new_bookmark_name = c.name.clone();
+
+            if let Err(BibleBotError::Storage(e)) = try_and_retry_save(bm_file, &c.name, "text/plain", &bucket, 5) {
+                error!("{}", e);
+                
+                info!("Writing bookmark to local {}...", bm_file);
+                if let Err(e) = write(bm_file, &c.name) {
+                    error!("{}", e);
+                };
+            };
         }
 
         match respond_to_comment(&c, &reddit) {
             Err(BibleBotError::Lookup(e)) => warn!("{}: {}", c.name, e),
             Err(BibleBotError::RedditResponse(e)) => error!("{}: {}", c.name, e),
-            Ok(_) => info!("{}: Successfully responded to!", c.name),
+            _ => info!("{}: Successfully responded to!", c.name),
         }
     });
-
-    s3_access::save_file(bm_file, &new_bookmark_name, "text/plain", &bucket);
 }
