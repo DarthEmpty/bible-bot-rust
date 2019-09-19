@@ -60,8 +60,8 @@ impl Info {
     pub fn new(v: &Value) -> BibleLookupResult<Self> {
         let (book, chapter, version) = match v["type"].as_str().unwrap_or_default() {
             "chapter" => Ok((
-                v["book"].clone(),
-                v["chapter"].clone(),
+                v["book_name"].clone(),
+                v["chapter_nr"].clone(),
                 v["version"].clone(),
             )),
             "verse" => Ok((
@@ -72,9 +72,16 @@ impl Info {
             _ => Err(BibleLookupError::BadPassageType),
         }?;
 
+        // Handle chapter_nr separately (it can be either a number or a string...)
+        let c = if chapter.is_number() {
+            serde_json::from_value::<usize>(chapter)?.to_string()
+        } else {
+            serde_json::from_value(chapter)?
+        };
+
         Ok(Self {
             book: serde_json::from_value(book)?,
-            chapter: serde_json::from_value(chapter)?,
+            chapter: c,
             version: serde_json::from_value(version)?,
         })
     }
