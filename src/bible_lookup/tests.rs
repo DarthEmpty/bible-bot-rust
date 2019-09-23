@@ -42,24 +42,14 @@ fn test_info_constructor() {
 
 #[test]
 fn test_refs_to_passages() {
-    let passage_pairs = refs_to_passage_pairs(vec!["John3:16-17".into(), "1Corinthians13".into()]);
-    assert_eq!(passage_pairs.len(), 2);
-}
-
-#[test]
-fn test_build_reply() {
-    let text = fetch_ref("John3:16-18").unwrap();
-    let json = serde_json::from_str(&text).unwrap();
-    let passage = Passage::new(&json).unwrap();
-    let info = Info::new(&json).unwrap();
-    let reply = build_reply(&info, &passage);
-    assert!(!reply.is_empty());
+    let passage_map = lookup_refs(vec!["John3:16-17".into(), "1Corinthians13".into()]);
+    assert_eq!(passage_map.len(), 2);
 }
 
 #[test]
 fn test_build_replies() {
     let refs = vec!["John3:16-17".into(), "1Corinthians13".into()];
-    let pairs = refs_to_passage_pairs(refs);
-    let replies = build_replies(pairs);
+    let map = lookup_refs(refs);
+    let replies = build_replies(&map);
     assert!(!replies.contains("Could not find requested passage"));
 }

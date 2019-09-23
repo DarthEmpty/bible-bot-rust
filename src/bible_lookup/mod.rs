@@ -1,13 +1,15 @@
-pub mod err;
 mod constants;
+pub mod err;
 mod passage;
 mod tests;
 
 use err::{BibleLookupError, BibleLookupResult};
+use log::error;
 use passage::*;
 use regex::Regex;
 use reqwest;
 use serde_json;
+use std::collections::HashMap;
 
 pub fn extract_refs(text: &str) -> BibleLookupResult<Vec<String>> {
     // Matches with:
@@ -39,28 +41,29 @@ fn fetch_ref(reference: &str) -> Result<String, reqwest::Error> {
     Ok(text)
 }
 
-pub fn refs_to_passage_pairs(refs: Vec<String>) -> Vec<BibleLookupResult<(Info, Passage)>> {
-    refs.into_iter()
-        .map(|reference| {
-            let text = fetch_ref(&reference)?;
-            let json = serde_json::from_str(&text)?;
+fn to_passage_pair(reference: &str) -> BibleLookupResult<(Info, Passage)> {
+    let text = fetch_ref(&reference)?;
+    let json = serde_json::from_str(&text)?;
 
-            Ok((Info::new(&json)?, Passage::new(&json)?))
-        })
+    Ok((Info::new(&json)?, Passage::new(&json)?))
+}
+
+pub fn lookup_refs(refs: Vec<String>) -> HashMap<String, BibleLookupResult<(Info, Passage)>> {
+    refs.into_iter()
+        .map(|reference| (reference.clone(), to_passage_pair(&reference)))
         .collect()
 }
 
-fn build_reply(info: &Info, passage: &Passage) -> String {
-    format!("{}\n\n{}", info.to_string(), passage.to_string())
-}
-
-pub fn build_replies(passage_pairs: Vec<BibleLookupResult<(Info, Passage)>>) -> String {
-    passage_pairs
-        .into_iter()
-        .map(|pair| match pair {
-            Ok(v) => build_reply(&v.0, &v.1),
-            Err(e) => format!("{}", e),
+pub fn build_replies(passage_map: &HashMap<String, BibleLookupResult<(Info, Passage)>>) -> String {
+    passage_map
+        .keys()
+        .map(|key| match &passage_map[key] {
+            Ok((info, passage)) => format!("{}\n\n{}", info.to_string(), passage.to_string()),
+            Err(e) => {
+                error!("[{}]: {}", key, e);
+                format!("Error finding {}", key)
+            }
         })
         .collect::<Vec<String>>()
-        .join("\n---\n")
+        .join("\n\n___\n\n")
 }

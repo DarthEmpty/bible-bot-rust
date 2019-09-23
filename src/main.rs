@@ -44,8 +44,8 @@ fn try_and_retry_response(comment: &Comment, body: &str, reddit: &App, tries: us
 fn respond_to_comment(comment: &Comment, reddit: &App) -> BibleBotResult<()> {
     let refs = bible_lookup::extract_refs(&comment.body)?;
 
-    let passage_pairs = bible_lookup::refs_to_passage_pairs(refs);
-    let reply_body = bible_lookup::build_replies(passage_pairs);
+    let passage_pairs = bible_lookup::lookup_refs(refs);
+    let reply_body = bible_lookup::build_replies(&passage_pairs);
 
     try_and_retry_response(comment, &reply_body, reddit, 5)
 }
