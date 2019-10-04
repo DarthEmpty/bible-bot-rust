@@ -6,25 +6,40 @@ mod s3_access;
 use err::{BibleBotResult, BibleBotError};
 use failure;
 use log::{info, warn, error};
+use log_panics;
 use orca::{data::Comment, App};
 use simplelog::{self, LevelFilter, WriteLogger};
 use s3::bucket::Bucket;
 use s3_access::config::Config;
 use std::fs::{write, OpenOptions};
 
-fn create_app(config: &Config) -> App {
-    let mut app = App::new(&config.app_name, &config.version, &config.author)
-        .expect("Could not create Reddit instance");
+fn setup_logging(filename: &str) {
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(filename)
+        .unwrap();
+
+    WriteLogger::init(
+        LevelFilter::Info,
+        simplelog::Config::default(),
+        file.try_clone().unwrap(),
+    ).unwrap();
+
+    log_panics::init();
+}
+
+fn create_app(config: &Config) -> BibleBotResult<App> {
+    let mut app = App::new(&config.app_name, &config.version, &config.author)?;
 
     app.authorize_script(
         &config.client_id,
         &config.client_secret,
         &config.username,
         &config.password,
-    )
-    .expect("Could not authorize script");
+    )?;
 
-    app
+    Ok(app)
 }
 
 fn try_and_retry_response(comment: &Comment, body: &str, reddit: &App, tries: usize) -> BibleBotResult<()> {
@@ -74,24 +89,16 @@ fn main() {
     let sub = env!("SUBREDDIT");
     let limit: i32 = env!("COMMENT_LIMIT").parse().unwrap_or(100);
     let bm_file = env!("BOOKMARK_FILE");
-    let log_file = env!("LOG_FILE");
+    let log_filename = env!("LOG_FILE");
 
-    WriteLogger::init(
-        LevelFilter::Info,
-        simplelog::Config::default(),
-        OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(log_file)
-            .unwrap()
-    ).expect("Logger could not be initialised.");
+    setup_logging(log_filename);
 
     info!("Connecting to S3 bucket...");
     let bucket = s3_access::connect_to_bucket().expect("Could not connect to bucket");
 
     info!("Creating instance of 'Bible Bot'...");
     let config = s3_access::load_config(&bucket).expect("Could not load config");
-    let reddit = create_app(&config);
+    let reddit = create_app(&config).expect("Could not create App instance");
 
     info!("Loading last read comment (bookmark)...");
     let bookmark_name = if let Ok(name) = s3_access::load_file(bm_file, &bucket) {
@@ -129,5 +136,5 @@ fn main() {
         }
     });
 
-    info!("Done!")
+    info!("----- Done! -----")
 }
