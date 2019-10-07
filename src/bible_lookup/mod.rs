@@ -32,7 +32,14 @@ pub fn extract_refs(text: &str) -> BibleLookupResult<Vec<String>> {
 }
 
 fn fetch_ref(reference: &str) -> Result<String, reqwest::Error> {
-    let url = format!("{}{}", constants::BIBLE_API_URL, reference);
+    let url = format!(
+        "{}{}{}{}{}",
+        constants::BIBLE_API_URL,
+        constants::TEXT_PARAM,
+        reference,
+        constants::VERSION_PARAM,
+        constants::VERSION_DEFAULT
+    );
     let text: String = reqwest::get(&url)?
         .text()?
         .replace("(", "")

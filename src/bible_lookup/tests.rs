@@ -51,7 +51,6 @@ fn test_info_constructor_ok() {
 #[test]
 fn test_lookup_refs() {
     let passage_map = lookup_refs(vec![GOOD_EXAMPLE.into(), OTHER_GOOD_EXAMPLE.into()]);
-    assert_eq!(passage_map.len(), 2);
     assert_eq!(
         passage_map
             .values()
