@@ -1,0 +1,61 @@
+version: 2
+
+jobs:
+  test_and_build:
+    docker:
+      - image: circleci/rust:latest
+
+    environment:
+      COMMENT_LIMIT: 100
+      SUBREDDIT: pythonforengineers
+      BOOKMARK_FILE: bookmark.txt
+      LOG_FILE: log.txt
+    
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+      - run:
+          name: Run Tests
+          command: cargo test
+      - run:
+          name: Build Binary
+          command: cargo build --release
+      - persist_to_workspace:
+          root: ~/repo
+          paths:
+            - target/release/bible-bot-rust
+  
+  deploy:
+    machine:
+      image: ubuntu-1604:201903-01
+
+    working_directory: ~/repo
+
+    steps:
+      - attach_workspace:
+          at: ~/repo
+      - add_ssh_keys:
+          fingerprints:
+            - "7f:e6:10:99:b1:c0:c6:ec:33:94:ec:41:2d:6a:3d:04"
+      - run:
+          name: Setup Lightsail
+          command: > 
+            ssh ubuntu@35.178.208.241 
+            "[[ ! -d bible-bot ]] 
+            && mkdir bible-bot 
+            && echo 'Destination directory made!'
+            || echo 'Destination directory exists'"
+      - run:
+          name: Deploy to Lightsail
+          command: scp "target/release/bible-bot-rust" "ubuntu@35.178.208.241:bible-bot"
+
+workflows:
+  version: 2
+  test_build_deploy:
+    jobs:
+      - test_and_build:
+          context: s3-access-context
+      - deploy:
+          requires:
+            - test_and_build
