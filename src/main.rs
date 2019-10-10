@@ -27,7 +27,7 @@ fn setup_logging(filename: &str) {
     WriteLogger::init(
         LevelFilter::Info,
         simplelog::Config::default(),
-        file.try_clone().unwrap(),
+        file,
     )
     .unwrap();
 
