@@ -3,15 +3,19 @@ mod bible_lookup;
 mod err;
 mod s3_access;
 
-use err::{BibleBotResult, BibleBotError};
+use err::{BibleBotError, BibleBotResult};
 use failure;
-use log::{info, warn, error};
+use log::{error, info, warn};
 use log_panics;
 use orca::{data::Comment, App};
-use simplelog::{self, LevelFilter, WriteLogger};
 use s3::bucket::Bucket;
 use s3_access::config::Config;
-use std::fs::{write, OpenOptions};
+use simplelog::{self, LevelFilter, WriteLogger};
+use std::{
+    fs::{write, OpenOptions},
+    thread::sleep,
+    time::Duration,
+};
 
 fn setup_logging(filename: &str) {
     let file = OpenOptions::new()
@@ -24,7 +28,8 @@ fn setup_logging(filename: &str) {
         LevelFilter::Info,
         simplelog::Config::default(),
         file.try_clone().unwrap(),
-    ).unwrap();
+    )
+    .unwrap();
 
     log_panics::init();
 }
@@ -42,7 +47,12 @@ fn create_app(config: &Config) -> BibleBotResult<App> {
     Ok(app)
 }
 
-fn try_and_retry_response(comment: &Comment, body: &str, reddit: &App, tries: usize) -> BibleBotResult<()> {
+fn try_and_retry_response(
+    comment: &Comment,
+    body: &str,
+    reddit: &App,
+    tries: usize,
+) -> BibleBotResult<()> {
     match reddit.comment(body, &comment.name) {
         Err(e) => {
             if tries == 0 {
@@ -52,7 +62,7 @@ fn try_and_retry_response(comment: &Comment, body: &str, reddit: &App, tries: us
                 try_and_retry_response(comment, body, reddit, tries - 1)
             }
         }
-        _ => Ok(())
+        _ => Ok(()),
     }
 }
 
@@ -85,14 +95,7 @@ fn try_and_retry_save(
     }
 }
 
-fn main() {
-    let sub = env!("SUBREDDIT");
-    let limit: i32 = env!("COMMENT_LIMIT").parse().unwrap_or(100);
-    let bm_file = env!("BOOKMARK_FILE");
-    let log_filename = env!("LOG_FILE");
-
-    setup_logging(log_filename);
-
+fn pulse(sub: &str, comment_limit: i32, bookmark_file: &str) {
     info!("Connecting to S3 bucket...");
     let bucket = s3_access::connect_to_bucket().expect("Could not connect to bucket");
 
@@ -101,7 +104,7 @@ fn main() {
     let reddit = create_app(&config).expect("Could not create App instance");
 
     info!("Loading last read comment (bookmark)...");
-    let bookmark_name = if let Ok(name) = s3_access::load_file(bm_file, &bucket) {
+    let bookmark_name = if let Ok(name) = s3_access::load_file(bookmark_file, &bucket) {
         info!("Bookmark found: {}", name);
         name
     } else {
@@ -111,19 +114,19 @@ fn main() {
 
     info!("Loading most recent comments from {}...", sub);
     let comments = reddit
-        .get_recent_comments(sub, Some(limit), Some(&bookmark_name))
+        .get_recent_comments(sub, Some(comment_limit), Some(&bookmark_name))
         .expect("Could not retrieve comments");
-    
     info!("Responding to comments...");
     comments.enumerate().for_each(|(i, c)| {
         if i == 0 {
             info!("New bookmark found: {}", c.name);
 
-            if let Err(BibleBotError::Storage(e)) = try_and_retry_save(bm_file, &c.name, "text/plain", &bucket, 5) {
+            if let Err(BibleBotError::Storage(e)) =
+                try_and_retry_save(bookmark_file, &c.name, "text/plain", &bucket, 5)
+            {
                 error!("{}", e);
-                
-                info!("Writing bookmark to local {}...", bm_file);
-                if let Err(e) = write(bm_file, &c.name) {
+                info!("Writing bookmark to local {}...", bookmark_file);
+                if let Err(e) = write(bookmark_file, &c.name) {
                     error!("{}", e);
                 };
             };
@@ -137,4 +140,17 @@ fn main() {
     });
 
     info!("----- Done! -----")
+}
+
+fn main() {
+    let sub: &str = env!("SUBREDDIT");
+    let limit: i32 = env!("COMMENT_LIMIT").parse().unwrap_or(100);
+    let bm_file: &str = env!("BOOKMARK_FILE");
+    let log_filename: &str = env!("LOG_FILE");
+    setup_logging(log_filename);
+
+    loop {
+        pulse(sub, limit, bm_file);
+        sleep(Duration::from_secs(30));
+    }
 }
