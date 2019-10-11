@@ -13,6 +13,7 @@ use s3_access::config::Config;
 use simplelog::{self, LevelFilter, WriteLogger};
 use std::{
     fs::{write, OpenOptions},
+    str::Split,
     thread::sleep,
     time::Duration,
 };
@@ -24,12 +25,7 @@ fn setup_logging(filename: &str) {
         .open(filename)
         .unwrap();
 
-    WriteLogger::init(
-        LevelFilter::Info,
-        simplelog::Config::default(),
-        file,
-    )
-    .unwrap();
+    WriteLogger::init(LevelFilter::Info, simplelog::Config::default(), file).unwrap();
 
     log_panics::init();
 }
@@ -143,14 +139,16 @@ fn pulse(sub: &str, comment_limit: i32, bookmark_file: &str) {
 }
 
 fn main() {
-    let sub: &str = env!("SUBREDDIT");
+    #![allow(clippy::single_char_pattern)]
+    let subs: Split<&str> = env!("SUBREDDITS").split(";");
     let limit: i32 = env!("COMMENT_LIMIT").parse().unwrap_or(100);
     let bm_file: &str = env!("BOOKMARK_FILE");
     let log_filename: &str = env!("LOG_FILE");
     setup_logging(log_filename);
 
     loop {
-        pulse(sub, limit, bm_file);
+        subs.clone()
+            .for_each(|sub| pulse(sub, limit, bm_file));
         sleep(Duration::from_secs(30));
     }
 }

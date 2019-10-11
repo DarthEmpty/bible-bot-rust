@@ -7,7 +7,7 @@ jobs:
 
     environment:
       COMMENT_LIMIT: 100
-      SUBREDDIT: pythonforengineers
+      SUBREDDITS: pythonforengineers
       BOOKMARK_FILE: bookmark.txt
       LOG_FILE: log.txt
     
