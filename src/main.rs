@@ -90,6 +90,18 @@ fn try_and_retry_save(
     }
 }
 
+fn save_bookmark(filename: &str, content: &str, bucket: &Bucket) {
+    if let Err(BibleBotError::Storage(e)) =
+        try_and_retry_save(filename, content, "text/plain", &bucket, 5)
+    {
+        error!("{}", e);
+        info!("Writing bookmark to local {}...", filename);
+        if let Err(e) = write(filename, content) {
+            error!("{}", e);
+        };
+    };
+}
+
 fn pulse(sub: &str, comment_limit: i32, bookmark_file: &str, bucket: &Bucket, reddit: &App) {
     info!("Loading last read comment (bookmark)...");
     let bookmark_name = if let Ok(name) = s3_access::load_file(bookmark_file, &bucket) {
@@ -108,16 +120,7 @@ fn pulse(sub: &str, comment_limit: i32, bookmark_file: &str, bucket: &Bucket, re
     comments.enumerate().for_each(|(i, c)| {
         if i == 0 {
             info!("New bookmark found: {}", c.name);
-
-            if let Err(BibleBotError::Storage(e)) =
-                try_and_retry_save(bookmark_file, &c.name, "text/plain", &bucket, 5)
-            {
-                error!("{}", e);
-                info!("Writing bookmark to local {}...", bookmark_file);
-                if let Err(e) = write(bookmark_file, &c.name) {
-                    error!("{}", e);
-                };
-            };
+            save_bookmark(bookmark_file, &c.name, bucket)
         }
 
         match respond_to_comment(&c, &reddit) {
