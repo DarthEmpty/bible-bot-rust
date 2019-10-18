@@ -91,14 +91,7 @@ fn try_and_retry_save(
     }
 }
 
-fn pulse(sub: &str, comment_limit: i32, bookmark_file: &str) {
-    info!("Connecting to S3 bucket...");
-    let bucket = s3_access::connect_to_bucket().expect("Could not connect to bucket");
-
-    info!("Creating instance of 'Bible Bot'...");
-    let config = s3_access::load_config(&bucket).expect("Could not load config");
-    let reddit = create_app(&config).expect("Could not create App instance");
-
+fn pulse(sub: &str, comment_limit: i32, bookmark_file: &str, bucket: &Bucket, reddit: &App) {
     info!("Loading last read comment (bookmark)...");
     let bookmark_name = if let Ok(name) = s3_access::load_file(bookmark_file, &bucket) {
         info!("Bookmark found: {}", name);
@@ -139,16 +132,26 @@ fn pulse(sub: &str, comment_limit: i32, bookmark_file: &str) {
 }
 
 fn main() {
-    #![allow(clippy::single_char_pattern)]
+    #[allow(clippy::single_char_pattern)]
     let subs: Split<&str> = env!("SUBREDDITS").split(";");
     let limit: i32 = env!("COMMENT_LIMIT").parse().unwrap_or(100);
     let bm_file: &str = env!("BOOKMARK_FILE");
     let log_filename: &str = env!("LOG_FILE");
     setup_logging(log_filename);
 
+    info!("+++++ INITIALISING +++++");
+    info!("Connecting to S3 bucket...");
+    let bucket = s3_access::connect_to_bucket().expect("Could not connect to bucket");
+
+    info!("Creating instance of 'Bible Bot'...");
+    let config = s3_access::load_config(&bucket).expect("Could not load config");
+    let reddit = create_app(&config).expect("Could not create App instance");
+
+    info!("+++++ START MAIN LOOP +++++");
+
     loop {
         subs.clone()
-            .for_each(|sub| pulse(sub, limit, bm_file));
-        sleep(Duration::from_secs(30));
+            .for_each(|sub| pulse(sub, limit, bm_file, &bucket, &reddit));
+        sleep(Duration::from_millis(500));
     }
 }
