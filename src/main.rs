@@ -102,25 +102,16 @@ fn save_bookmark(filename: &str, content: &str, bucket: &Bucket) {
     };
 }
 
-fn pulse(sub: &str, comment_limit: i32, bookmark_file: &str, bucket: &Bucket, reddit: &App) {
-    info!("Loading last read comment (bookmark)...");
-    let bookmark_name = if let Ok(name) = s3_access::load_file(bookmark_file, &bucket) {
-        info!("Bookmark found: {}", name);
-        name
-    } else {
-        warn!("No bookmark found.");
-        String::default()
-    };
-
+fn check_and_respond(sub: &str, comment_limit: i32, bookmark_name: &str, reddit: &App) -> Option<String> {
     info!("Loading most recent comments from {}...", sub);
     let comments = reddit
         .get_recent_comments(sub, Some(comment_limit), Some(&bookmark_name))
         .expect("Could not retrieve comments");
     info!("Responding to comments...");
+    let mut new_bookmark = String::default();
     comments.enumerate().for_each(|(i, c)| {
         if i == 0 {
-            info!("New bookmark found: {}", c.name);
-            save_bookmark(bookmark_file, &c.name, bucket)
+            new_bookmark = c.name.clone();
         }
 
         match respond_to_comment(&c, &reddit) {
@@ -130,10 +121,15 @@ fn pulse(sub: &str, comment_limit: i32, bookmark_file: &str, bucket: &Bucket, re
         }
     });
 
-    info!("----- Done! -----")
+    if new_bookmark.is_empty() {
+        None
+    } else {
+        Some(new_bookmark)
+    }
 }
 
 fn main() {
+    // Read environment variables and set up logger
     let sub: &str = env!("SUBREDDITS");
     let limit: i32 = env!("COMMENT_LIMIT").parse().unwrap_or(100);
     let bm_file: &str = env!("BOOKMARK_FILE");
@@ -148,10 +144,26 @@ fn main() {
     let config = s3_access::load_config(&bucket).expect("Could not load config");
     let reddit = create_app(&config).expect("Could not create App instance");
 
+    info!("Loading last read comment (bookmark)...");
+    let mut bm = if let Ok(name) = s3_access::load_file(bm_file, &bucket) {
+        info!("Bookmark found: {}", name);
+        name
+    } else {
+        warn!("No bookmark found.");
+        String::default()
+    };
+
     info!("+++++ START MAIN LOOP +++++");
 
     loop {
-        pulse(sub, limit, bm_file, &bucket, &reddit);
+        if let Some(new_bm) = check_and_respond(sub, limit, &bm, &reddit) {
+            if bm != new_bm {
+                save_bookmark(bm_file, &new_bm, &bucket);
+                bm = new_bm;
+            }
+        }
+        
+        info!("----- Done! -----");
         sleep(Duration::from_millis(500));
     }
 }
