@@ -5,7 +5,7 @@ mod s3_access;
 
 use err::{BibleBotError, BibleBotResult};
 use failure;
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use log_panics;
 use orca::{data::Comment, App};
 use s3::bucket::Bucket;
@@ -103,11 +103,11 @@ fn save_bookmark(filename: &str, content: &str, bucket: &Bucket) {
 }
 
 fn check_and_respond(sub: &str, comment_limit: i32, bookmark_name: &str, reddit: &App) -> Option<String> {
-    info!("Loading most recent comments from {}...", sub);
+    debug!("Loading most recent comments from {}...", sub);
     let comments = reddit
         .get_recent_comments(sub, Some(comment_limit), Some(&bookmark_name))
         .expect("Could not retrieve comments");
-    info!("Responding to comments...");
+    debug!("Responding to comments...");
     let mut new_bookmark = String::default();
     comments.enumerate().for_each(|(i, c)| {
         if i == 0 {
@@ -149,7 +149,7 @@ fn main() {
         info!("Bookmark found: {}", name);
         name
     } else {
-        warn!("No bookmark found.");
+        info!("No bookmark found.");
         String::default()
     };
 
@@ -163,7 +163,7 @@ fn main() {
             }
         }
         
-        info!("----- Done! -----");
+        debug!("----- Done! -----");
         sleep(Duration::from_millis(500));
     }
 }
