@@ -8,6 +8,7 @@ use std::collections::HashMap;
 //     <verse-no> : {
 //         "verse_nr" : Number | String,
 //         "verse" : String
+//     }
 // })
 #[derive(Default, Deserialize, Debug)]
 pub struct Passage(HashMap<String, HashMap<String, Value>>);

@@ -12,10 +12,43 @@ use s3::bucket::Bucket;
 use s3_access::config::Config;
 use simplelog::{self, LevelFilter, WriteLogger};
 use std::{
+    cell::Cell,
     fs::{write, OpenOptions},
     thread::sleep,
     time::Duration,
 };
+
+struct AppHandler {
+    app: Cell<App>,
+    config: Config,
+}
+
+impl AppHandler {
+    fn build_and_authorise_app(config: &Config) -> BibleBotResult<App> {
+        let mut app = App::new(&config.app_name, &config.version, &config.author)?;
+
+        app.authorize_script(
+            &config.client_id,
+            &config.client_secret,
+            &config.username,
+            &config.password,
+        )?;
+
+        Ok(app)
+    }
+
+    pub fn new(config: Config) -> BibleBotResult<Self> {
+        let app = Self::build_and_authorise_app(&config)?;
+        Ok(Self{ app: Cell::new(app), config })
+    }
+
+    pub fn rebuild_app(&self) -> BibleBotResult<()> {
+        let new_app = Self::build_and_authorise_app(&self.config)?;
+        let old_app = self.app.replace(new_app);
+        drop(old_app);
+        Ok(())
+    }
+}
 
 fn setup_logging(filename: &str) {
     let file = OpenOptions::new()
