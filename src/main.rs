@@ -62,19 +62,6 @@ fn setup_logging(filename: &str) {
     log_panics::init();
 }
 
-fn create_app(config: &Config) -> BibleBotResult<App> {
-    let mut app = App::new(&config.app_name, &config.version, &config.author)?;
-
-    app.authorize_script(
-        &config.client_id,
-        &config.client_secret,
-        &config.username,
-        &config.password,
-    )?;
-
-    Ok(app)
-}
-
 fn try_and_retry_response(
     comment: &Comment,
     body: &str,
@@ -135,9 +122,9 @@ fn save_bookmark(filename: &str, content: &str, bucket: &Bucket) {
     };
 }
 
-fn check_and_respond(sub: &str, comment_limit: i32, bookmark_name: &str, reddit: &App) -> Option<String> {
+fn check_and_respond(sub: &str, comment_limit: i32, bookmark_name: &str, mut reddit: AppHandler) -> (AppHandler, Option<String>) {  
     debug!("Loading most recent comments from {}...", sub);
-    let comments = reddit
+    let comments = reddit.app.get_mut()
         .get_recent_comments(sub, Some(comment_limit), Some(&bookmark_name))
         .expect("Could not retrieve comments");
     debug!("Responding to comments...");
@@ -147,17 +134,24 @@ fn check_and_respond(sub: &str, comment_limit: i32, bookmark_name: &str, reddit:
             new_bookmark = c.name.clone();
         }
 
-        match respond_to_comment(&c, &reddit) {
+        match respond_to_comment(&c, &reddit.app.get_mut()) {
             Err(BibleBotError::Lookup(e)) => warn!("{}: {}", c.name, e),
-            Err(BibleBotError::RedditResponse(e)) => error!("{}: {}", c.name, e),
+            Err(BibleBotError::RedditResponse(e)) => {
+                warn!("Reauthorising script and trying again...");
+                if reddit.rebuild_app().is_ok() && respond_to_comment(&c, &reddit.app.get_mut()).is_ok() {
+                    info!("{}: Response successful after reauthorising", c.name)
+                } else {
+                    error!("{}: {}", c.name, e)
+                }
+            },
             _ => info!("{}: Successfully responded to!", c.name),
         }
     });
 
     if new_bookmark.is_empty() {
-        None
+        (reddit, None)
     } else {
-        Some(new_bookmark)
+        (reddit, Some(new_bookmark))
     }
 }
 
@@ -175,7 +169,7 @@ fn main() {
 
     info!("Creating instance of 'Bible Bot'...");
     let config = s3_access::load_config(&bucket).expect("Could not load config");
-    let reddit = create_app(&config).expect("Could not create App instance");
+    let mut reddit = AppHandler::new(config).expect("Could not create App instance");
 
     info!("Loading last read comment (bookmark)...");
     let mut bm = if let Ok(name) = s3_access::load_file(bm_file, &bucket) {
@@ -189,7 +183,9 @@ fn main() {
     info!("+++++ START MAIN LOOP +++++");
 
     loop {
-        if let Some(new_bm) = check_and_respond(sub, limit, &bm, &reddit) {
+        let bm_res = check_and_respond(sub, limit, &bm, reddit);
+        reddit = bm_res.0;
+        if let Some(new_bm) = bm_res.1 {
             if bm != new_bm {
                 save_bookmark(bm_file, &new_bm, &bucket);
                 bm = new_bm;
